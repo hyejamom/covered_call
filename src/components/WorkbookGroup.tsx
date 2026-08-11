@@ -1,5 +1,5 @@
 import type { SimulationConstants } from '../types/simulation'
-import type { Workbook } from '../types/workbook'
+import type { SheetTabDragPayload, Workbook } from '../types/workbook'
 import ExcelDownloadButton from './ExcelDownloadButton'
 import RenameInput from './RenameInput'
 import SheetTabBar from './SheetTabBar'
@@ -22,6 +22,13 @@ interface WorkbookGroupProps {
     onStartRenameWorkbook: (workbookId: string) => void
     onCommitRenameWorkbook: (workbookId: string, name: string) => void
     onRemoveWorkbook: (workbookId: string) => void
+    /** 시트 탭 드래그 이동 — 같은 파일 내 순서 변경 + 다른 파일로 옮기기 겸용 */
+    onMoveTab: (
+        source: SheetTabDragPayload,
+        targetWorkbookId: string,
+        targetTabId: string | null,
+        before: boolean,
+    ) => void
 }
 
 /**
@@ -75,8 +82,9 @@ function WorkbookGroup(props: WorkbookGroupProps) {
                 </div>
             </div>
 
-            {/* 2) 이 파일에 들어갈 시트 탭 목록 */}
+            {/* 2) 이 파일에 들어갈 시트 탭 목록 — 드래그로 순서 변경 / 다른 파일로 이동 */}
             <SheetTabBar
+                workbookId={props.workbook.id}
                 tabs={props.workbook.tabs}
                 activeTabId={props.activeTabId}
                 editingTabId={props.editingTabId}
@@ -87,6 +95,7 @@ function WorkbookGroup(props: WorkbookGroupProps) {
                 onCommitRename={props.onCommitRenameTab}
                 onCancelRename={props.onCancelRename}
                 onRemove={(tabId) => props.onRemoveTab(props.workbook.id, tabId)}
+                onMove={props.onMoveTab}
             />
         </section>
     )

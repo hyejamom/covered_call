@@ -396,6 +396,16 @@
     white-space: nowrap;
 }
 
+/* 정기매수 중단 행의 안내 — "−금액 · 최대 N원 (정기 M원)" 이라 길어서 줄바꿈을 허용한다 */
+.event_hint_stop {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.35;
+    white-space: normal;
+    color: var(--amber, #e0a63c);
+}
+
 .event_check {
     display: flex;
     align-items: center;
@@ -844,6 +854,39 @@
     color: #cfdcff;
 }
 
+/* ── 시트 탭 드래그 이동 ── */
+/* 끌고 있는 탭 — 원래 자리를 흐리게 남겨 이동 중임을 표시 */
+.sheet_tab_dragging {
+    opacity: 0.4;
+}
+
+/* 드롭 대상 탭의 앞/뒤 삽입선 */
+.sheet_tab_drop_before::before,
+.sheet_tab_drop_after::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--blue);
+    box-shadow: 0 0 6px rgba(91, 140, 255, 0.8);
+}
+
+.sheet_tab_drop_before::before {
+    left: -5px;
+}
+
+.sheet_tab_drop_after::after {
+    right: -5px;
+}
+
+/* 빈 영역에 놓는 중 — 이 파일 맨 뒤로 이동 */
+.sheet_tab_bar_drop_end {
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 0 0 1px rgba(91, 140, 255, 0.55);
+}
+
 /* ── 엑셀 다운로드 ── */
 .excel_download {
     display: flex;
@@ -896,6 +939,7 @@
     gap: 22px;
     margin: 0 auto;
     max-width: 1400px;
+    position: relative;
 }
 
 .year_block {
@@ -1102,6 +1146,8 @@
     font-weight: 700;
     letter-spacing: 0.02em;
     cursor: help;
+    position: absolute;
+    left: -50px
 }
 
 /* 연도 옆 나이 표기 — 생년월을 넣었을 때만 노출 */

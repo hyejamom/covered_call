@@ -11,7 +11,9 @@ export const EventType = {
     ONE_TIME: 'ONE_TIME',
     /** ④ 월 정기 매수 금액 변경 — 특정 시점부터 정기 금액 교체 */
     CHANGE: 'CHANGE',
-    /** ⑤ 배당 재투자 구간 — 해당 기간의 배당을 재투자할지 인출할지 지정 */
+    /** ⑤ 정기매수 중단/감액 — 해당 기간 동안 월 정기 매수액에서 지정 금액만큼 빼고 투입 */
+    RECURRING_STOP: 'RECURRING_STOP',
+    /** ⑥ 배당 재투자 구간 — 해당 기간의 배당을 재투자할지 인출할지 지정 */
     REINVEST: 'REINVEST',
 } as const
 
@@ -23,6 +25,7 @@ export const EVENT_TYPE_LABEL: Record<EventType, string> = {
     [EventType.RECURRING]: '월 정기 매수',
     [EventType.ONE_TIME]: '단발성 추가',
     [EventType.CHANGE]: '정기금액 변경',
+    [EventType.RECURRING_STOP]: '정기매수 중단',
     [EventType.REINVEST]: '재투자 구간',
 }
 
@@ -33,9 +36,9 @@ export interface InvestEvent {
     type: EventType
     /** 시작(또는 해당) 연월 — 'YYYY-MM' 형식. 문자열 사전순 비교로 시점 대소를 판정한다. */
     startYm: string
-    /** 종료 연월 — RECURRING 전용. 빈 문자열이면 "계속" */
+    /** 종료 연월 — RECURRING / RECURRING_STOP / REINVEST 전용. 빈 문자열이면 "계속" */
     endYm: string
-    /** 투입 금액 (원) */
+    /** 투입 금액 (원) — RECURRING_STOP 에서는 "빼는 금액(감액분)"을 뜻한다 */
     amount: number
     /** INITIAL 전용 — 일시금 안에 그 달 정기 매수분이 이미 포함되어 있는지 (중복 가산 방지) */
     includesRecurring: boolean

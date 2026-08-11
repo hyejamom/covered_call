@@ -5,6 +5,7 @@ import {
     type SimulationConstants,
 } from '../types/simulation'
 import { SELECTABLE_YEARS } from '../constants/gridConstants'
+import { calcRecurringBase, calcStopCapacity } from '../services/simulationEngine'
 import { formatKrw, toAgeInYear } from '../utils/format'
 import ReinvestSection from './ReinvestSection'
 import YearMonthPicker from './YearMonthPicker'
@@ -32,12 +33,20 @@ const EVENT_TYPE_OPTIONS: EventType[] = [
     EventType.RECURRING,
     EventType.ONE_TIME,
     EventType.CHANGE,
+    EventType.RECURRING_STOP,
 ]
+
+/** 종료 연월(구간)을 쓰는 타입 — 나머지는 단일 시점 이벤트라 종료 연월이 무의미하다 */
+function usesEndYm(type: EventType): boolean {
+    return type === EventType.RECURRING || type === EventType.RECURRING_STOP
+}
 
 // ┣━━━━━━━━━━━━━━━━ Components ━━━━━━━━━━━━━━━━━┫
 
 interface EventRowProps {
     event: InvestEvent
+    /** 같은 시트의 전체 이벤트 — 정기매수 중단 행의 감액 상한을 계산하는 데 필요하다 */
+    allEvents: InvestEvent[]
     /** 선택 가능한 연도 목록 — 파일의 대상 기간 */
     years: number[]
     onChange: (id: string, patch: Partial<InvestEvent>) => void
@@ -49,30 +58,66 @@ function EventRow(props: EventRowProps) {
 
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     // 1) 타입별 입력 가능 필드 판정 (재투자 구간은 전용 섹션에서 다루므로 여기 오지 않는다)
-    const isRecurring = props.event.type === EventType.RECURRING
     const isInitial = props.event.type === EventType.INITIAL
+    const isStop = props.event.type === EventType.RECURRING_STOP
+    const hasEndYm = usesEndYm(props.event.type)
+
+    // 2) 정기매수 중단 행의 감액 상한 — 시작 연월 시점의 정기 매수 총액에서 다른 중단분을 뺀 잔여
+    //    예) 정기 매수 20만 + 40만이면 이 행에는 최대 60만까지만 적을 수 있다.
+    const stopCapacity = isStop
+        ? calcStopCapacity(props.allEvents, props.event.startYm, props.event.id)
+        : 0
+
+    // 3) 시작 연월 시점의 감액 전 정기 매수액 — 안내 문구에 "현재 정기 N원" 으로 표기
+    const recurringBase = isStop ? calcRecurringBase(props.allEvents, props.event.startYm) : 0
 
     // ┣━━━━━━━━━━━━━━━━ Handlers ━━━━━━━━━━━━━━━━━━━┫
 
+    /**
+     * 정기매수 중단 금액을 상한(그 시점 정기 매수 잔여분) 안으로 자른다
+     * @param amount 자를 금액 @param ym 상한 판정 기준 연월
+     */
+    const clampStopAmount = (amount: number, ym: string): number => {
+        const capacity = calcStopCapacity(props.allEvents, ym, props.event.id)
+        return Math.min(Math.max(0, amount), capacity)
+    }
+
     /** 이벤트 타입 변경 — @param value 선택된 타입 값 */
     const handleTypeChange = (value: string) => {
-        // 정기 매수가 아닌 타입으로 바뀌면 종료 연월은 의미가 없으므로 비운다.
+        // 1) 구간 타입이 아니면 종료 연월은 의미가 없으므로 비운다.
         const nextType = value as EventType
+        // 2) 중단 타입으로 바뀌면 기존 금액이 상한을 넘을 수 있어 즉시 잘라 넣는다.
+        const nextAmount = nextType === EventType.RECURRING_STOP
+            ? clampStopAmount(props.event.amount, props.event.startYm)
+            : props.event.amount
+
         props.onChange(props.event.id, {
             type: nextType,
-            endYm: nextType === EventType.RECURRING ? props.event.endYm : '',
+            endYm: usesEndYm(nextType) ? props.event.endYm : '',
+            amount: nextAmount,
             includesRecurring: nextType === EventType.INITIAL ? props.event.includesRecurring : false,
         })
     }
 
     /** 연월 변경 — @param key 대상 필드 @param value 'YYYY-MM' 문자열 */
     const handleYmChange = (key: 'startYm' | 'endYm', value: string) => {
+        // 시작 연월이 바뀌면 그 시점의 정기 매수액이 달라져 상한도 함께 바뀐다 — 초과분을 다시 잘라 준다.
+        if (isStop && key === 'startYm') {
+            props.onChange(props.event.id, {
+                startYm: value,
+                amount: clampStopAmount(props.event.amount, value),
+            })
+            return
+        }
         props.onChange(props.event.id, { [key]: value })
     }
 
     /** 금액 변경 — @param value 입력된 원 단위 문자열 */
     const handleAmountChange = (value: string) => {
-        props.onChange(props.event.id, { amount: Number(value) || 0 })
+        const nextAmount = Number(value) || 0
+        props.onChange(props.event.id, {
+            amount: isStop ? clampStopAmount(nextAmount, props.event.startYm) : nextAmount,
+        })
     }
 
     /** 정기분 포함 여부 토글 — @param checked 체크 상태 */
@@ -104,25 +149,34 @@ function EventRow(props: EventRowProps) {
                 onChange={(value) => handleYmChange('startYm', value)}
             />
 
-            {/* 3) 종료 연월 — 정기 매수에서만 사용, 미지정이면 "계속" */}
+            {/* 3) 종료 연월 — 구간 타입(정기 매수 / 정기매수 중단)에서만 사용, 미지정이면 "계속" */}
             <YearMonthPicker
                 value={props.event.endYm}
                 emptyLabel={'계속'}
-                disabled={!isRecurring}
+                disabled={!hasEndYm}
                 onChange={(value) => handleYmChange('endYm', value)}
             />
 
-            {/* 4) 금액 */}
+            {/* 4) 금액 — 정기매수 중단이면 "깎을 금액"이며 그 시점 정기 매수액이 상한이 된다 */}
             <div className={'event_field_amount'}>
                 <input
                     className={'event_field event_field_number'}
                     type={'number'}
                     step={10000}
                     min={0}
+                    max={isStop ? stopCapacity : undefined}
                     value={props.event.amount}
                     onChange={(e) => handleAmountChange(e.target.value)}
                 />
-                <span className={'event_hint'}>{formatKrw(props.event.amount)}원</span>
+                {isStop ? (
+                    <span className={'event_hint event_hint_stop'}>
+                        {recurringBase > 0
+                            ? `−${formatKrw(props.event.amount)}원 · 최대 ${formatKrw(stopCapacity)}원 (정기 ${formatKrw(recurringBase)}원)`
+                            : '이 시점에 정기 매수가 없습니다'}
+                    </span>
+                ) : (
+                    <span className={'event_hint'}>{formatKrw(props.event.amount)}원</span>
+                )}
             </div>
 
             {/* 5) 초기 일시금 전용 옵션 — 일시금에 그 달 정기분이 포함되어 중복 가산을 막을지 */}
@@ -294,6 +348,7 @@ function FilterPanel(props: FilterPanelProps) {
                     <EventRow
                         key={event.id}
                         event={event}
+                        allEvents={props.events}
                         years={props.years}
                         onChange={props.onEventChange}
                         onRemove={props.onEventRemove}
@@ -320,6 +375,8 @@ function FilterPanel(props: FilterPanelProps) {
 
             {/* 6) 계산 규칙 안내 */}
             <p className={'sim_filter_note'}>
+                <b>정기매수 중단</b>은 그 기간 동안 월 정기 매수액에서 적은 금액만큼 빼고 투입합니다
+                (정기 매수가 20만·40만이면 최대 60만까지 · 60만을 적으면 그 기간 정기 매수 전면 중단) ·
                 배당은 전월 말 보유 주식 기준으로 매달 지급되어 <b>그 달에 즉시 재투자</b>합니다
                 (위 <b>배당 재투자 구간</b>에서 "재투자 X"로 지정한 기간은 <b>인출</b>되어 매수·잔액에 반영되지 않음) ·
                 <b>1주 단위</b>로 살 수 있는 만큼 매수하고 남은 예수금은 다음 달로 이월(잔액은 항상 1주 가격 미만) ·

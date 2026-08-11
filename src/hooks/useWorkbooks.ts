@@ -16,7 +16,7 @@ import type {
     SimulationResult,
     WorkbookSimulationResult,
 } from '../types/simulation'
-import type { SheetTab, Workbook } from '../types/workbook'
+import type { SheetTab, SheetTabDragPayload, Workbook } from '../types/workbook'
 
 // ┣━━━━━━━━━━━━━━━━ Constants ━━━━━━━━━━━━━━━━━━┫
 
@@ -254,6 +254,60 @@ export function useWorkbooks(constants: SimulationConstants) {
         }
     }
 
+    /**
+     * 시트 탭 이동 — 같은 파일 내 순서 변경 + 다른 파일로 옮기기 겸용
+     * @param source 끌어 온 시트 (소속 파일 id + 탭 id)
+     * @param targetWorkbookId 놓은 자리의 파일 id
+     * @param targetTabId 놓은 자리의 탭 id. null이면 그 파일 맨 뒤에 붙인다
+     * @param before 대상 탭의 앞(왼쪽)에 넣을지 여부. false면 뒤에 넣는다
+     */
+    const handleMoveTab = (
+        source: SheetTabDragPayload,
+        targetWorkbookId: string,
+        targetTabId: string | null,
+        before: boolean,
+    ) => {
+        if (source.tabId === targetTabId) return
+        markEdited()
+
+        setWorkbooks((prev) => {
+            // 1) 이동할 탭 확인
+            const sourceWorkbook = prev.find((workbook) => workbook.id === source.workbookId)
+            const movingTab = sourceWorkbook?.tabs.find((tab) => tab.id === source.tabId)
+            if (!sourceWorkbook || !movingTab) return prev
+
+            // 2) 다른 파일로 옮기는 경우, 원본 파일에 시트가 하나뿐이면 거부한다 (시트 0장인 엑셀 파일은 만들 수 없다)
+            const crossFile = source.workbookId !== targetWorkbookId
+            if (crossFile && sourceWorkbook.tabs.length <= 1) return prev
+
+            return prev.map((workbook) => {
+                // 3) 원본 파일에서 먼저 빼낸다 (같은 파일 안 이동이면 이 결과 위에 다시 꽂는다)
+                const removed = workbook.id === source.workbookId
+                    ? workbook.tabs.filter((tab) => tab.id !== source.tabId)
+                    : workbook.tabs
+                if (workbook.id !== targetWorkbookId) {
+                    return removed === workbook.tabs ? workbook : { ...workbook, tabs: removed }
+                }
+
+                // 4) 대상 파일에 끼워 넣는다 — 대상 탭이 없으면(빈 영역에 드롭) 맨 뒤
+                const targetIndex = targetTabId === null
+                    ? -1
+                    : removed.findIndex((tab) => tab.id === targetTabId)
+                const insertAt = targetIndex < 0
+                    ? removed.length
+                    : (before ? targetIndex : targetIndex + 1)
+
+                return {
+                    ...workbook,
+                    tabs: [...removed.slice(0, insertAt), movingTab, ...removed.slice(insertAt)],
+                }
+            })
+        })
+
+        // 5) 옮긴 시트를 그대로 선택 상태로 둔다 — 엑셀에서 시트를 끌어 옮겼을 때와 같은 동작
+        setActiveTabId(source.tabId)
+    }
+
     /** 워크북 이름 편집 시작 — @param workbookId 편집할 워크북 id */
     const handleStartRenameWorkbook = (workbookId: string) => {
         setEditingWorkbookId(workbookId)
@@ -406,6 +460,7 @@ export function useWorkbooks(constants: SimulationConstants) {
         handleMarkPersisted,
         handleAddWorkbook,
         handleRemoveWorkbook,
+        handleMoveTab,
         handleStartRenameWorkbook,
         handleCommitRenameWorkbook,
         handleSelectTab,

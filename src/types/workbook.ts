@@ -32,3 +32,9 @@ export interface Workbook {
     endYear: number
     tabs: SheetTab[]
 }
+
+/** 시트 탭 드래그 페이로드 — 어느 파일의 어느 시트를 끌고 있는지 */
+export interface SheetTabDragPayload {
+    workbookId: string
+    tabId: string
+}

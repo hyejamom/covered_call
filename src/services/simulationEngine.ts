@@ -13,6 +13,8 @@ import {
 //
 // [지급/재투자 시점] 배당은 "전월 말 보유 주식 수" 기준으로 그 달에 지급되며, 같은 달에 즉시 재투자한다.
 // [매수 순서]       예수금(이월 잔액) + 이번 달 투입금 + 이번 달 세후 배당 → 전액으로 주식 매수
+// [정기매수 중단]   중단 구간이 걸린 달은 그 달 정기 매수액에서 지정 금액만큼 빼고 투입한다.
+//                   깎을 수 있는 최대치는 그 달의 정기 매수 총액(예: 20만+40만 → 60만)이며, 0 미만으로는 내려가지 않는다.
 // [매수 단위]       1주 단위로만 매수(정수 매수). 1주 값에 못 미치는 금액은 잔액으로 다음 달 이월되므로
 //                   잔액은 구조적으로 항상 "1주 가격 미만"을 유지한다 (돈이 차는 즉시 매수).
 // [과세]            판정 단위는 워크북(엑셀 파일) 전체. 그 안 모든 시트의 "연간 세전 배당 합계"가
@@ -32,11 +34,68 @@ function toBuyableShares(cash: number, sharePriceKrw: number): number {
     return Math.floor(cash / sharePriceKrw + 1e-9)
 }
 
+/** 이벤트가 해당 연월을 포함하는 구간인지 (종료 연월이 비어 있으면 "계속") */
+function coversYm(event: InvestEvent, ym: string): boolean {
+    return event.startYm !== ''
+        && event.startYm <= ym
+        && (event.endYm === '' || ym <= event.endYm)
+}
+
+/**
+ * 특정 달의 "감액 전" 월 정기 매수 금액
+ * 1) 그 달에 걸린 정기 매수 이벤트가 하나도 없으면 0 (정기 매수 자체가 없는 달)
+ * 2) 그 시점까지 발효된 금액변경 이벤트가 있으면 가장 최근 것이 전체 금액을 대체
+ * 3) 없으면 활성 정기 매수 금액을 모두 합산
+ */
+export function calcRecurringBase(events: InvestEvent[], ym: string): number {
+    // 1) 활성 정기 매수 판정
+    const activeRecurring = events.filter((event) =>
+        event.type === EventType.RECURRING && coversYm(event, ym),
+    )
+    if (activeRecurring.length === 0) return 0
+
+    // 2) 발효된 금액변경 이벤트 중 가장 최근 것 채택
+    const appliedChanges = events
+        .filter((event) => event.type === EventType.CHANGE && event.startYm !== '' && event.startYm <= ym)
+        .sort((a, b) => a.startYm.localeCompare(b.startYm))
+
+    if (appliedChanges.length > 0) return appliedChanges[appliedChanges.length - 1].amount
+
+    // 3) 변경 이벤트가 없으면 활성 정기 매수 합계
+    return activeRecurring.reduce((sum, event) => sum + event.amount, 0)
+}
+
+/**
+ * 특정 달에 유효한 정기매수 중단(감액) 금액 합계
+ * @param excludeId 합계에서 제외할 이벤트 id — 편집 중인 행 자신을 빼고 남은 여유를 구할 때 사용
+ */
+export function calcRecurringStop(events: InvestEvent[], ym: string, excludeId?: string): number {
+    return events
+        .filter((event) =>
+            event.type === EventType.RECURRING_STOP
+            && event.id !== excludeId
+            && coversYm(event, ym),
+        )
+        .reduce((sum, event) => sum + event.amount, 0)
+}
+
+/**
+ * 특정 달에 "추가로" 중단할 수 있는 최대 금액
+ * — 감액 전 정기 매수액에서 다른 중단 이벤트가 이미 깎아 놓은 몫을 뺀 잔여분.
+ *   예) 정기 매수가 20만 + 40만이면 상한 60만, 이미 다른 행이 10만을 끊었으면 상한 50만.
+ * @param excludeId 상한을 계산할 대상(편집 중인) 이벤트 id
+ */
+export function calcStopCapacity(events: InvestEvent[], ym: string, excludeId?: string): number {
+    if (ym === '') return 0
+    return Math.max(0, calcRecurringBase(events, ym) - calcRecurringStop(events, ym, excludeId))
+}
+
 /**
  * 특정 달의 총 투입금 계산
  * 1) 초기 일시금 / 단발성 추가는 해당 연월이 일치할 때 가산
  * 2) 정기 매수는 기간에 포함될 때만 가산하되, 금액변경 이벤트가 있으면 그 금액으로 대체
- * 3) 초기 일시금이 "그 달 정기분 포함"이면 정기분을 중복 가산하지 않음
+ * 3) 정기매수 중단 구간이 걸려 있으면 그만큼 깎는다 (0 아래로는 내려가지 않음)
+ * 4) 초기 일시금이 "그 달 정기분 포함"이면 정기분을 중복 가산하지 않음
  */
 function calcContribution(events: InvestEvent[], ym: string): number {
     let total = 0
@@ -47,31 +106,19 @@ function calcContribution(events: InvestEvent[], ym: string): number {
         if (isOneShot && event.startYm === ym) total += event.amount
     }
 
-    // 2) 정기 매수 활성 여부 판정 (종료 연월이 비어 있으면 "계속")
-    const activeRecurring = events.filter((event) =>
-        event.type === EventType.RECURRING
-        && event.startYm !== ''
-        && event.startYm <= ym
-        && (event.endYm === '' || ym <= event.endYm),
+    // 2) 감액 전 월 정기 매수액 — 0이면 정기 매수가 없는 달이므로 이후 처리 불필요
+    const recurringBase = calcRecurringBase(events, ym)
+    if (recurringBase <= 0) return total
+
+    // 3) 중단(감액) 반영 — 정기 매수액을 초과해 깎여 마이너스 투입이 되지 않도록 0에서 막는다
+    const monthlyAmount = Math.max(0, recurringBase - calcRecurringStop(events, ym))
+
+    // 4) 초기 일시금에 그 달 정기분이 포함되어 있으면 건너뜀
+    const coveredByInitial = events.some((event) =>
+        event.type === EventType.INITIAL && event.startYm === ym && event.includesRecurring,
     )
 
-    if (activeRecurring.length > 0) {
-        // 2-1) 현재 시점까지 발효된 금액변경 이벤트 중 가장 최근 것을 채택
-        const appliedChanges = events
-            .filter((event) => event.type === EventType.CHANGE && event.startYm !== '' && event.startYm <= ym)
-            .sort((a, b) => a.startYm.localeCompare(b.startYm))
-
-        const monthlyAmount = appliedChanges.length > 0
-            ? appliedChanges[appliedChanges.length - 1].amount
-            : activeRecurring.reduce((sum, event) => sum + event.amount, 0)
-
-        // 3) 초기 일시금에 그 달 정기분이 포함되어 있으면 건너뜀
-        const coveredByInitial = events.some((event) =>
-            event.type === EventType.INITIAL && event.startYm === ym && event.includesRecurring,
-        )
-
-        if (!coveredByInitial) total += monthlyAmount
-    }
+    if (!coveredByInitial) total += monthlyAmount
 
     return total
 }
@@ -83,10 +130,7 @@ function calcContribution(events: InvestEvent[], ym: string): number {
  */
 function isReinvesting(events: InvestEvent[], ym: string): boolean {
     const coveringRules = events.filter((event) =>
-        event.type === EventType.REINVEST
-        && event.startYm !== ''
-        && event.startYm <= ym
-        && (event.endYm === '' || ym <= event.endYm),
+        event.type === EventType.REINVEST && coversYm(event, ym),
     )
 
     if (coveringRules.length === 0) return true
@@ -97,11 +141,12 @@ function isReinvesting(events: InvestEvent[], ym: string): boolean {
 
 /**
  * 시뮬레이션 개시 연월 — 투입 이벤트 중 가장 빠른 시점 (이벤트가 없으면 null)
- * 재투자 구간은 투입이 아니라 배당 처리 방식만 바꾸는 규칙이므로 개시 시점 판정에서 제외한다.
+ * 재투자 구간과 정기매수 중단 구간은 새 돈이 들어오는 이벤트가 아니라 기존 흐름을 바꾸는 규칙이므로
+ * 개시 시점 판정에서 제외한다. (중단 구간만 있는 시트가 그 달부터 시작되어 버리는 것을 막는다)
  */
 function findStartYm(events: InvestEvent[]): string | null {
     const validYms = events
-        .filter((event) => event.type !== EventType.REINVEST)
+        .filter((event) => event.type !== EventType.REINVEST && event.type !== EventType.RECURRING_STOP)
         .map((event) => event.startYm)
         .filter((ym) => ym !== '')
 

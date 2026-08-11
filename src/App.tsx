@@ -347,6 +347,7 @@ function App() {
                             onStartRenameWorkbook={workbook.handleStartRenameWorkbook}
                             onCommitRenameWorkbook={workbook.handleCommitRenameWorkbook}
                             onRemoveWorkbook={workbook.handleRemoveWorkbook}
+                            onMoveTab={workbook.handleMoveTab}
                         />
                     ))}
 
