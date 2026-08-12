@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import './App.css'
+import AppViewToggle from './components/AppViewToggle'
 import ExcelDownloadButton from './components/ExcelDownloadButton'
 import FilterPanel from './components/FilterPanel'
+import LedgerView from './components/LedgerView'
 import SaveButton from './components/SaveButton'
 import WorkbookGroup from './components/WorkbookGroup'
+import { AppView, toOppositeView } from './constants/appViewConstants'
 import {
     MONTH_LABELS,
     MONTH_NUMBERS,
@@ -10,7 +14,7 @@ import {
     RowLabel,
     formatShareCount,
 } from './constants/gridConstants'
-import { resolveConstants } from './constants/simulationDefaults'
+import { INFLATION_POLICY, resolveConstants } from './constants/simulationDefaults'
 import { useMarketInfo } from './hooks/useMarketInfo'
 import { useWorkbooks } from './hooks/useWorkbooks'
 import { toYm } from './services/simulationEngine'
@@ -60,19 +64,37 @@ function formatUpdatedAt(value: string): string {
 function toCellText(rowLabel: RowLabel, monthly: MonthlyResult): string {
     if (rowLabel === RowLabel.CUMULATIVE) return formatKrw(monthly.cumulativePurchase)
     if (rowLabel === RowLabel.BALANCE) return formatKrw(monthly.balance)
+    if (rowLabel === RowLabel.DIVIDEND_REAL) return formatKrw(monthly.dividendReal)
     return formatKrw(monthly.dividendNet)
 }
 
 /** 배당금 셀 클래스 — 과세 여부와 인출(재투자 안 함) 여부를 색으로 구분 */
 function toValueClassName(rowLabel: RowLabel, monthly: MonthlyResult): string {
+    // 실질가치 행은 참고 지표라 한 톤 낮춰 표기하되, 인출한 달은 명목 행과 동일하게 흐리게 처리한다
+    if (rowLabel === RowLabel.DIVIDEND_REAL) {
+        return monthly.reinvested
+            ? 'grid_cell_value grid_cell_value_real'
+            : 'grid_cell_value grid_cell_value_real grid_cell_value_withdrawn'
+    }
     if (rowLabel !== RowLabel.DIVIDEND) return 'grid_cell_value'
     if (!monthly.reinvested) return 'grid_cell_value grid_cell_value_withdrawn'
     return monthly.taxed ? 'grid_cell_value grid_cell_value_taxed' : 'grid_cell_value'
 }
 
+/** 구매력 비율 — 명목 대비 실질 금액이 몇 %인지 (명목이 0이면 100%로 본다) */
+function toPurchasingPowerPercent(monthly: MonthlyResult): string {
+    if (monthly.dividendNet <= 0) return '100.0'
+    return ((monthly.dividendReal / monthly.dividendNet) * 100).toFixed(1)
+}
+
 /** 항목별 셀 툴팁 — 정확한 원 단위 값과 산출 근거 */
 function toCellTitle(rowLabel: RowLabel, monthly: MonthlyResult): string {
     const head = `${formatYmLabel(monthly.ym)}`
+    if (rowLabel === RowLabel.DIVIDEND_REAL) {
+        return `${head} 세후 배당 ${formatKrw(monthly.dividendNet)}원은`
+            + ` ${INFLATION_POLICY.BASE_YEAR}년 화폐가치로 약 ${formatKrw(monthly.dividendReal)}원`
+            + ` (물가상승률 연 ${INFLATION_POLICY.RATE_PERCENT}% 복리 할인 · 구매력 ${toPurchasingPowerPercent(monthly)}%)`
+    }
     if (rowLabel === RowLabel.CUMULATIVE) {
         return `${head} 누적 매수금액 ${formatKrw(monthly.cumulativePurchase)}원 · 보유 ${formatShareCount(monthly.shares)}`
             + ` (이번 달 매수 ${formatKrw(monthly.purchaseAmount)}원 · 투입 ${formatKrw(monthly.contribution)}원)`
@@ -222,7 +244,12 @@ function YearBlock(props: YearBlockProps) {
 
 function App() {
 
+    // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
+    const [view, setView] = useState<AppView>(AppView.COVERED_CALL)   // 최상위 화면 — 진입 시 적립 계산기
+
     // ┣━━━━━━━━━━━━━━━━ CustomHooks ━━━━━━━━━━━━━━━━┫
+    // 시세·워크북 훅은 화면 전환과 무관하게 항상 살려 둔다.
+    // 가계부로 갔다 오는 사이 언마운트되면 저장하지 않은 편집 내용이 통째로 날아가기 때문이다.
     const { quote, dividend, rate, dividendYield } = useMarketInfo()
 
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
@@ -246,9 +273,20 @@ function App() {
     // 그리드에 그릴 연도 목록(workbook.years)도 훅이 선택된 파일의 대상 기간에서 파생시켜 함께 돌려준다.
     const workbook = useWorkbooks(constants)
 
+    // ┣━━━━━━━━━━━━━━━━ Handlers ━━━━━━━━━━━━━━━━━━━┫
+
+    /** 화면 토글 — 적립 계산기 ↔ 가계부 */
+    const handleToggleView = () => {
+        setView(toOppositeView(view))
+    }
+
     return (
         <div className={'app_root'}>
-            {/* 0) 플로팅 저장 버튼 — 화면 우측 상단 고정. 스크롤과 무관하게 항상 떠 있다 */}
+            {/* 0-1) 플로팅 화면 토글 — 화면 좌측 상단 고정 */}
+            <AppViewToggle view={view} onToggle={handleToggleView} />
+
+            {/* 0-2) 플로팅 저장 버튼 — 화면 우측 상단 고정. 스크롤과 무관하게 항상 떠 있다.
+                    가계부 화면에서도 남겨 둬야 적립 계산기의 미저장 변경을 놓치지 않는다 */}
             <SaveButton
                 workbooks={workbook.workbooks}
                 activeTabId={workbook.activeTabId}
@@ -257,126 +295,136 @@ function App() {
                 onPersisted={workbook.handleMarkPersisted}
             />
 
-            {/* 1) 상단 요약 정보 — JEPQ 오늘 금액 / 배당률 / 오늘 환율 */}
-            <div className={'top_info'}>
-                <InfoCard
-                    label={'JEPQ 오늘 금액'}
-                    value={quote.data ? formatNumber(quote.data.price) : '-'}
-                    unit={'USD'}
-                    trend={quote.data
-                        ? `전일 ${formatNumber(quote.data.previousClose)} · ${quote.data.changeAmount >= 0 ? '+' : ''}${formatNumber(quote.data.changeAmount)} (${quote.data.changeRate >= 0 ? '+' : ''}${quote.data.changeRate.toFixed(2)}%)`
-                        : '-'}
-                    accent={'blue'}
-                    tone={quoteTone}
-                    loading={quote.loading}
-                    error={quote.error}
-                />
-                <InfoCard
-                    label={'JEPQ 배당률'}
-                    value={dividendYield.data !== null ? formatNumber(dividendYield.data) : '-'}
-                    unit={'%'}
-                    trend={dividend.data
-                        ? `최근 ${dividend.data.paymentCount}회 배당 $${formatNumber(dividend.data.ttmDividend)} · 배당락 ${formatUsDate(dividend.data.exDividendDate)}`
-                        : '-'}
-                    accent={'green'}
-                    tone={TrendTone.FLAT}
-                    loading={dividendYield.loading}
-                    error={dividendYield.error}
-                />
-                <InfoCard
-                    label={'월 배당금(주당)'}
-                    value={dividend.data ? dividend.data.latestDividend.toFixed(5) : '-ㅓ디'}
-                    unit={'USD'}
-                    trend={dividend.data
-                        ? `${formatKrw(dividend.data.latestDividend * constants.exchangeRate)}원 · 최근 1회 지급액 기준`
-                        : '-'}
-                    accent={'violet'}
-                    tone={TrendTone.FLAT}
-                    loading={dividend.loading}
-                    error={dividend.error}
-                />
-                <InfoCard
-                    label={'오늘 환율'}
-                    value={rate.data ? formatNumber(rate.data.krwPerUsd) : '-'}
-                    unit={'KRW/USD'}
-                    trend={rate.data ? `매매기준율 · ${formatUpdatedAt(rate.data.updatedAt)} 갱신` : '-'}
-                    accent={'amber'}
-                    tone={TrendTone.FLAT}
-                    loading={rate.loading}
-                    error={rate.error}
-                />
-            </div>
+            {/* 0-3) 가계부 화면 — 적립 계산기와 완전히 별개의 데이터를 다룬다 */}
+            {view === AppView.LEDGER && <LedgerView />}
 
-            {/* 2) 시뮬레이션 필터 — 선택된 탭의 고정 상수 + 투입 이벤트 편집 (변경 시 아래 그리드 자동 재계산) */}
-            <FilterPanel
-                constants={constants}
-                events={workbook.events}
-                firstTaxedYear={workbook.result.firstTaxedYear}
-                usingFallback={usingFallback}
-                workbookName={workbook.activeWorkbook.name}
-                startYear={workbook.startYear}
-                endYear={workbook.endYear}
-                years={workbook.years}
-                onStartYearChange={workbook.handleStartYearChange}
-                onEndYearChange={workbook.handleEndYearChange}
-                birthYm={workbook.birthYm}
-                onBirthYmChange={workbook.handleBirthYmChange}
-                onEventAdd={workbook.handleEventAdd}
-                onEventChange={workbook.handleEventChange}
-                onEventRemove={workbook.handleEventRemove}
-            />
-
-            {/* 3) 그리드 툴바 — 좌측 파일 그룹(그룹 1개 = 엑셀 파일 1개) / 우측 전체 다운로드 */}
-            <div className={'grid_toolbar'}>
-                <div className={'workbook_group_list'}>
-                    {workbook.workbooks.map((item) => (
-                        <WorkbookGroup
-                            key={item.id}
-                            workbook={item}
-                            constants={constants}
-                            activeTabId={workbook.activeTabId}
-                            editingTabId={workbook.editingTabId}
-                            editingWorkbookId={workbook.editingWorkbookId}
-                            removable={workbook.workbooks.length > 1}
-                            onSelectTab={workbook.handleSelectTab}
-                            onAddTab={workbook.handleAddTab}
-                            onRemoveTab={workbook.handleRemoveTab}
-                            onStartRenameTab={workbook.handleStartRenameTab}
-                            onCommitRenameTab={workbook.handleCommitRenameTab}
-                            onCancelRename={workbook.handleCancelRename}
-                            onStartRenameWorkbook={workbook.handleStartRenameWorkbook}
-                            onCommitRenameWorkbook={workbook.handleCommitRenameWorkbook}
-                            onRemoveWorkbook={workbook.handleRemoveWorkbook}
-                            onMoveTab={workbook.handleMoveTab}
-                        />
-                    ))}
-
-                    {/* 3-1) 새 파일(그룹) 추가 */}
-                    <button
-                        type={'button'}
-                        className={'workbook_add'}
-                        onClick={workbook.handleAddWorkbook}
-                        title={'엑셀 파일 추가'}
-                    >
-                        +
-                    </button>
+            {/* 0-4) 적립 계산기 화면 — 아래 1)~4) 블록이 한 덩어리다 */}
+            {view === AppView.COVERED_CALL && (
+                <>
+                {/* 1) 상단 요약 정보 — JEPQ 오늘 금액 / 배당률 / 오늘 환율 */}
+                <div className={'top_info'}>
+                    <InfoCard
+                        label={'JEPQ 오늘 금액'}
+                        value={quote.data ? formatNumber(quote.data.price) : '-'}
+                        unit={'USD'}
+                        trend={quote.data
+                            ? `전일 ${formatNumber(quote.data.previousClose)} · ${quote.data.changeAmount >= 0 ? '+' : ''}${formatNumber(quote.data.changeAmount)} (${quote.data.changeRate >= 0 ? '+' : ''}${quote.data.changeRate.toFixed(2)}%)`
+                            : '-'}
+                        accent={'blue'}
+                        tone={quoteTone}
+                        loading={quote.loading}
+                        error={quote.error}
+                    />
+                    <InfoCard
+                        label={'JEPQ 배당률'}
+                        value={dividendYield.data !== null ? formatNumber(dividendYield.data) : '-'}
+                        unit={'%'}
+                        trend={dividend.data
+                            ? `최근 ${dividend.data.paymentCount}회 배당 $${formatNumber(dividend.data.ttmDividend)} · 배당락 ${formatUsDate(dividend.data.exDividendDate)}`
+                            : '-'}
+                        accent={'green'}
+                        tone={TrendTone.FLAT}
+                        loading={dividendYield.loading}
+                        error={dividendYield.error}
+                    />
+                    <InfoCard
+                        label={'월 배당금(주당)'}
+                        value={dividend.data ? dividend.data.latestDividend.toFixed(5) : '-ㅓ디'}
+                        unit={'USD'}
+                        trend={dividend.data
+                            ? `${formatKrw(dividend.data.latestDividend * constants.exchangeRate)}원 · 최근 1회 지급액 기준`
+                            : '-'}
+                        accent={'violet'}
+                        tone={TrendTone.FLAT}
+                        loading={dividend.loading}
+                        error={dividend.error}
+                    />
+                    <InfoCard
+                        label={'오늘 환율'}
+                        value={rate.data ? formatNumber(rate.data.krwPerUsd) : '-'}
+                        unit={'KRW/USD'}
+                        trend={rate.data ? `매매기준율 · ${formatUpdatedAt(rate.data.updatedAt)} 갱신` : '-'}
+                        accent={'amber'}
+                        tone={TrendTone.FLAT}
+                        loading={rate.loading}
+                        error={rate.error}
+                    />
                 </div>
 
-                <ExcelDownloadButton workbooks={workbook.workbooks} constants={constants} />
-            </div>
+                {/* 2) 시뮬레이션 필터 — 선택된 탭의 고정 상수 + 투입 이벤트 편집 (변경 시 아래 그리드 자동 재계산) */}
+                <FilterPanel
+                    constants={constants}
+                    events={workbook.events}
+                    firstTaxedYear={workbook.result.firstTaxedYear}
+                    usingFallback={usingFallback}
+                    workbookName={workbook.activeWorkbook.name}
+                    startYear={workbook.startYear}
+                    endYear={workbook.endYear}
+                    years={workbook.years}
+                    onStartYearChange={workbook.handleStartYearChange}
+                    onEndYearChange={workbook.handleEndYearChange}
+                    birthYm={workbook.birthYm}
+                    onBirthYmChange={workbook.handleBirthYmChange}
+                    onEventAdd={workbook.handleEventAdd}
+                    onEventChange={workbook.handleEventChange}
+                    onEventRemove={workbook.handleEventRemove}
+                />
 
-            {/* 4) 연도별 적립 그리드 — 선택된 파일의 대상 기간 (선택된 탭 기준) */}
-            <div className={'bt_grid'}>
-                {workbook.years.map((year) => (
-                    <YearBlock
-                        key={year}
-                        year={year}
-                        birthYm={workbook.birthYm}
-                        result={workbook.result}
-                        workbookSummary={workbook.workbookResult.byYear[year]}
-                    />
-                ))}
-            </div>
+                {/* 3) 그리드 툴바 — 좌측 파일 그룹(그룹 1개 = 엑셀 파일 1개) / 우측 전체 다운로드 */}
+                <div className={'grid_toolbar'}>
+                    <div className={'workbook_group_list'}>
+                        {workbook.workbooks.map((item) => (
+                            <WorkbookGroup
+                                key={item.id}
+                                workbook={item}
+                                constants={constants}
+                                activeTabId={workbook.activeTabId}
+                                editingTabId={workbook.editingTabId}
+                                editingWorkbookId={workbook.editingWorkbookId}
+                                removable={workbook.workbooks.length > 1}
+                                onSelectTab={workbook.handleSelectTab}
+                                onAddTab={workbook.handleAddTab}
+                                onRemoveTab={workbook.handleRemoveTab}
+                                onStartRenameTab={workbook.handleStartRenameTab}
+                                onCommitRenameTab={workbook.handleCommitRenameTab}
+                                onCancelRename={workbook.handleCancelRename}
+                                onStartRenameWorkbook={workbook.handleStartRenameWorkbook}
+                                onCommitRenameWorkbook={workbook.handleCommitRenameWorkbook}
+                                onRemoveWorkbook={workbook.handleRemoveWorkbook}
+                                onDuplicateWorkbook={workbook.handleDuplicateWorkbook}
+                                onMoveWorkbook={workbook.handleMoveWorkbook}
+                                onMoveTab={workbook.handleMoveTab}
+                            />
+                        ))}
+
+                        {/* 3-1) 새 파일(그룹) 추가 */}
+                        <button
+                            type={'button'}
+                            className={'workbook_add'}
+                            onClick={workbook.handleAddWorkbook}
+                            title={'엑셀 파일 추가'}
+                        >
+                            +
+                        </button>
+                    </div>
+
+                    <ExcelDownloadButton workbooks={workbook.workbooks} constants={constants} />
+                </div>
+
+                {/* 4) 연도별 적립 그리드 — 선택된 파일의 대상 기간 (선택된 탭 기준) */}
+                <div className={'bt_grid'}>
+                    {workbook.years.map((year) => (
+                        <YearBlock
+                            key={year}
+                            year={year}
+                            birthYm={workbook.birthYm}
+                            result={workbook.result}
+                            workbookSummary={workbook.workbookResult.byYear[year]}
+                        />
+                    ))}
+                </div>
+                </>
+            )}
         </div>
     )
 }

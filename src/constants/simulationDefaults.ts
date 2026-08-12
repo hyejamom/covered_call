@@ -13,6 +13,18 @@ export const TAX_POLICY = {
     RATE_PERCENT: 15,
 } as const
 
+/**
+ * 물가 정책 — 고정 상수
+ * 미래에 받을 배당금이 "지금 돈으로는 얼마인지"를 함께 보여주기 위한 값이며, 매수·재투자 계산에는 전혀 관여하지 않는다.
+ * BASE_YEAR 를 바꾸면 gridConstants 의 RowLabel.DIVIDEND_REAL 라벨 문구도 자동으로 따라간다.
+ */
+export const INFLATION_POLICY = {
+    /** 연 물가상승률 (%) */
+    RATE_PERCENT: 2.5,
+    /** 실질가치 환산 기준연도 — 이 해 1월의 화폐가치를 1로 본다 */
+    BASE_YEAR: 2026,
+} as const
+
 /** 시세 조회 실패 시 사용할 폴백 값 — 2026-08-10 기준 */
 export const FALLBACK_MARKET = {
     sharePriceUsd: 59.74,
@@ -35,6 +47,8 @@ export function resolveConstants(
         exchangeRate: exchangeRate ?? FALLBACK_MARKET.exchangeRate,
         taxThresholdKrw: TAX_POLICY.THRESHOLD_KRW,
         taxRatePercent: TAX_POLICY.RATE_PERCENT,
+        inflationRatePercent: INFLATION_POLICY.RATE_PERCENT,
+        inflationBaseYear: INFLATION_POLICY.BASE_YEAR,
     }
 }
 

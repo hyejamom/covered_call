@@ -153,8 +153,9 @@ function buildSheetData(result: SimulationResult, birthYm: string, years: number
                     }
 
                     // 3-3) 나머지는 서식이 적용된 숫자로 기록 (엑셀에서 그대로 계산 가능)
-                    //      배당을 인출한 달은 회색 기울임 + X 표기로 재투자분과 구분한다
-                    const withdrawn = rowDef.field === 'dividendNet' && !monthly.reinvested
+                    //      배당을 인출한 달은 회색 기울임 + X 표기로 재투자분과 구분한다 (명목·실질 두 행 모두 동일 처리)
+                    const isDividendRow = rowDef.field === 'dividendNet' || rowDef.field === 'dividendReal'
+                    const withdrawn = isDividendRow && !monthly.reinvested
 
                     return {
                         ...cellStyle,

@@ -52,6 +52,33 @@ function createWorkbook(name: string, firstTabName: string, startYear: number, e
     }
 }
 
+/**
+ * 시트 복제 — 이름 · 생년월 · 이벤트를 그대로 옮기되 id는 전부 새로 발급한다.
+ * — id를 재사용하면 복사본과 원본이 같은 탭으로 취급돼 선택 · 삭제 · 편집이 서로 엉킨다.
+ * @param tab 복제할 원본 시트
+ */
+function duplicateTab(tab: SheetTab): SheetTab {
+    return {
+        ...createTab(tab.name, tab.events.map((event) => ({ ...event, id: nextEventId() }))),
+        birthYm: tab.birthYm,
+    }
+}
+
+/**
+ * 복제본 파일명 생성 — '원본 복사', 이미 같은 이름이 있으면 '원본 복사2', '원본 복사3' …
+ * @param baseName 원본 파일명
+ * @param workbooks 현재 파일 목록 (이름 충돌 검사용)
+ */
+function buildCopyName(baseName: string, workbooks: Workbook[]): string {
+    const taken = new Set(workbooks.map((workbook) => workbook.name))
+    const candidate = `${baseName} 복사`
+    if (!taken.has(candidate)) return candidate
+
+    let index = 2
+    while (taken.has(`${candidate}${index}`)) index += 1
+    return `${candidate}${index}`
+}
+
 /** id 접미 숫자 추출 — 'tab_12' → 12, 형식이 다르면 0 */
 function toIdNumber(id: string): number {
     const parsed = Number(id.split('_')[1])
@@ -252,6 +279,59 @@ export function useWorkbooks(constants: SimulationConstants) {
         if (removed?.tabs.some((tab) => tab.id === activeTabId)) {
             setActiveTabId(remaining[0].tabs[0].id)
         }
+    }
+
+    /**
+     * 워크북(엑셀 파일) 복제 — 시트 · 이벤트 · 대상 기간까지 통째로 복사해 원본 바로 뒤에 끼워 넣는다
+     * @param workbookId 복제할 워크북 id
+     */
+    const handleDuplicateWorkbook = (workbookId: string) => {
+        const source = workbooks.find((workbook) => workbook.id === workbookId)
+        if (!source) return
+        markEdited()
+
+        // 1) 파일 자체의 id 발급 — 시트 · 이벤트 id는 duplicateTab 안에서 새로 발급된다
+        workbookSequence += 1
+        const copied: Workbook = {
+            ...source,
+            id: `wb_${workbookSequence}`,
+            name: buildCopyName(source.name, workbooks),
+            tabs: source.tabs.map(duplicateTab),
+        }
+
+        // 2) 원본 바로 뒤에 끼워 넣는다 — 목록 맨 뒤에 붙이면 원본과 멀어져 비교하기 불편하다
+        const sourceIndex = workbooks.findIndex((workbook) => workbook.id === workbookId)
+        setWorkbooks([...workbooks.slice(0, sourceIndex + 1), copied, ...workbooks.slice(sourceIndex + 1)])
+
+        // 3) 복사본의 첫 시트를 선택 상태로 옮겨 바로 편집을 이어가게 한다
+        setActiveTabId(copied.tabs[0].id)
+    }
+
+    /**
+     * 워크북(엑셀 파일) 이동 — 파일 목록 안에서 순서만 바꾼다
+     * @param sourceWorkbookId 끌어 온 파일 id
+     * @param targetWorkbookId 놓은 자리의 파일 id
+     * @param before 대상 파일의 앞(왼쪽)에 넣을지 여부. false면 뒤에 넣는다
+     */
+    const handleMoveWorkbook = (sourceWorkbookId: string, targetWorkbookId: string, before: boolean) => {
+        if (sourceWorkbookId === targetWorkbookId) return
+        markEdited()
+
+        setWorkbooks((prev) => {
+            // 1) 이동할 파일 확인
+            const moving = prev.find((workbook) => workbook.id === sourceWorkbookId)
+            if (!moving) return prev
+
+            // 2) 원본을 먼저 빼낸 목록에서 삽입 위치를 잡는다
+            //    (자기 자신이 빠지면서 뒤 인덱스가 한 칸씩 당겨지는 문제를 이 순서로 흡수한다)
+            const removed = prev.filter((workbook) => workbook.id !== sourceWorkbookId)
+            const targetIndex = removed.findIndex((workbook) => workbook.id === targetWorkbookId)
+            if (targetIndex < 0) return prev
+
+            // 3) 대상 파일의 앞/뒤에 끼워 넣는다
+            const insertAt = before ? targetIndex : targetIndex + 1
+            return [...removed.slice(0, insertAt), moving, ...removed.slice(insertAt)]
+        })
     }
 
     /**
@@ -460,6 +540,8 @@ export function useWorkbooks(constants: SimulationConstants) {
         handleMarkPersisted,
         handleAddWorkbook,
         handleRemoveWorkbook,
+        handleDuplicateWorkbook,
+        handleMoveWorkbook,
         handleMoveTab,
         handleStartRenameWorkbook,
         handleCommitRenameWorkbook,

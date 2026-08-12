@@ -1,3 +1,4 @@
+import { INFLATION_POLICY } from './simulationDefaults'
 import type { MonthlyResult } from '../types/simulation'
 
 // ══════════ 그리드 공용 상수 ══════════
@@ -51,6 +52,8 @@ export const RowLabel = {
     /** 누적 매수금액 + 그 시점 보유주를 한 칸에 함께 표기 */
     CUMULATIVE: '누적 매수금액(보유주)',
     BALANCE: '잔액(예수금)',
+    /** 세후 배당을 기준연도 화폐가치로 환산한 금액 — 라벨의 연도는 INFLATION_POLICY.BASE_YEAR 를 따라간다 */
+    DIVIDEND_REAL: `배당금(${INFLATION_POLICY.BASE_YEAR}년 가치)`,
     DIVIDEND: '배당금(세후)',
 } as const
 
@@ -63,14 +66,16 @@ export interface GridRowDef {
      * 엑셀에 숫자로 기록할 필드.
      * 누적 매수금액 행은 금액과 보유주를 한 칸에 합쳐 쓰므로 숫자 필드가 없다(문자열로 기록).
      */
-    field?: keyof Pick<MonthlyResult, 'balance' | 'dividendNet'>
+    field?: keyof Pick<MonthlyResult, 'balance' | 'dividendNet' | 'dividendReal'>
     excelFormat?: string
 }
 
-/** 4) 세로 4칸 중 1~3행 정의 (0행은 연도 헤더) */
+/** 4) 세로 5칸 중 1~4행 정의 (0행은 연도 헤더) */
 export const GRID_ROWS: GridRowDef[] = [
     { label: RowLabel.CUMULATIVE },
     { label: RowLabel.BALANCE, field: 'balance', excelFormat: '#,##0' },
+    // 실질가치 행은 명목 배당 바로 위에 두어 "이 금액이 지금 돈으로는 얼마인지"를 나란히 읽게 한다
+    { label: RowLabel.DIVIDEND_REAL, field: 'dividendReal', excelFormat: '#,##0' },
     { label: RowLabel.DIVIDEND, field: 'dividendNet', excelFormat: '#,##0' },
 ]
 

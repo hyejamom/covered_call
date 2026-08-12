@@ -31,7 +31,8 @@
 /* ══════════ 루트 레이아웃 ══════════ */
 .app_root {
     min-height: 100vh;
-    padding: 32px 28px 56px;
+    /* 상단 여백은 좌우 플로팅 버튼(화면 토글 · 저장) 높이만큼 확보해 본문과 겹치지 않게 한다 */
+    padding: 76px 28px 56px;
     box-sizing: border-box;
     background:
         radial-gradient(1100px 520px at 12% -10%, #1d2949 0%, transparent 60%),
@@ -133,6 +134,66 @@
 .save_button_icon {
     font-size: 13px;
     line-height: 1;
+}
+
+/* ══════════ 화면 전환 토글 (app_view_toggle) ══════════ */
+/* 뷰포트 좌측 상단 고정 — 저장 버튼(우측 상단)과 같은 높이에 마주 보게 둔다 */
+.app_view_toggle {
+    position: fixed;
+    top: 18px;
+    left: 22px;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 16px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(22, 28, 46, 0.86);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+    color: var(--text-base);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.app_view_toggle:hover {
+    border-color: var(--blue);
+    background: rgba(30, 40, 66, 0.92);
+}
+
+/* 지금 보고 있는 화면 — 강조 */
+.app_view_toggle_current {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-strong);
+}
+
+/* 누르면 갈 화면 — 흐리게 */
+.app_view_toggle_next {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-mute);
+}
+
+.app_view_toggle:hover .app_view_toggle_next {
+    color: #cfdcff;
+}
+
+.app_view_toggle_arrow {
+    color: var(--text-mute);
+    font-size: 12px;
+}
+
+.app_view_toggle_icon {
+    font-size: 14px;
 }
 
 /* ══════════ 상단 정보 (top_info) ══════════ */
@@ -252,6 +313,7 @@
     border-radius: var(--radius-lg);
     background: linear-gradient(160deg, var(--bg-panel-soft) 0%, var(--bg-panel) 100%);
     box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
+    position: relative;
 }
 
 .sim_filter_head {
@@ -404,6 +466,9 @@
     line-height: 1.35;
     white-space: normal;
     color: var(--amber, #e0a63c);
+    /*position: absolute;*/
+    /*right: -175px;*/
+    /*width: 160px;*/
 }
 
 .event_check {
@@ -613,6 +678,7 @@
 }
 
 .workbook_group {
+    position: relative;   /* 드래그 삽입선(::before/::after)의 기준 박스 */
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -620,6 +686,33 @@
     border: 1px solid var(--line);
     border-radius: var(--radius-md);
     background: rgba(13, 17, 30, 0.55);
+}
+
+/* ── 파일 그룹 드래그 이동 ── */
+/* 끌고 있는 그룹 — 원래 자리를 흐리게 남겨 이동 중임을 표시 */
+.workbook_group_dragging {
+    opacity: 0.4;
+}
+
+/* 드롭 대상 그룹의 앞/뒤 삽입선 */
+.workbook_group_drop_before::before,
+.workbook_group_drop_after::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--blue);
+    box-shadow: 0 0 6px rgba(91, 140, 255, 0.8);
+}
+
+.workbook_group_drop_before::before {
+    left: -8px;
+}
+
+.workbook_group_drop_after::after {
+    right: -8px;
 }
 
 .workbook_group_head {
@@ -636,9 +729,13 @@
     font-size: 14px;
     font-weight: 700;
     color: var(--text-base);
-    cursor: pointer;
+    cursor: grab;
     user-select: none;
     white-space: nowrap;
+}
+
+.workbook_group_name:active {
+    cursor: grabbing;
 }
 
 .workbook_group_count {
@@ -667,6 +764,29 @@
     display: flex;
     align-items: center;
     gap: 4px;
+}
+
+/* 그룹 복제 — 아이콘만 */
+.workbook_group_duplicate {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid rgba(91, 140, 255, 0.35);
+    border-radius: 5px;
+    background: rgba(91, 140, 255, 0.1);
+    color: #cfdcff;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.14s ease, border-color 0.14s ease;
+}
+
+.workbook_group_duplicate:hover {
+    background: rgba(91, 140, 255, 0.24);
+    border-color: var(--blue);
 }
 
 .workbook_group_remove {
@@ -750,6 +870,7 @@
 }
 
 .sheet_tab {
+    position: relative;   /* 드래그 삽입선(::before/::after)의 기준 박스 */
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1054,6 +1175,12 @@
     white-space: nowrap;
 }
 
+/* 실질가치(기준연도 화폐가치) 배당금 — 참고 지표라 바이올렛 톤으로 한 단계 낮춰 표기 */
+.grid_cell_value_real {
+    color: var(--violet);
+    font-size: 12px;
+}
+
 /* 원천징수가 적용된 달의 배당금 — 앰버 톤으로 구분 */
 .grid_cell_value_taxed {
     color: var(--amber);
@@ -1129,6 +1256,15 @@
 
 .year_block_taxed .grid_cell_value {
     color: #ecd9b8;
+}
+
+/* 과세 연도의 실질가치 행 — 앰버 배경 위에서도 참고 지표임이 드러나도록 톤을 유지한다 */
+.year_block_taxed .grid_cell_value_real {
+    color: #cbb6ff;
+}
+
+.year_block_taxed .grid_cell_value_withdrawn {
+    color: #8a7d64;
 }
 
 .year_block_taxed .grid_cell_empty {
@@ -1306,6 +1442,726 @@
     }
 
     .save_button_meta {
+        display: none;
+    }
+
+    /* 화면 토글도 함께 끌어올리고, "갈 화면"만 남겨 폭을 줄인다 */
+    .app_view_toggle {
+        top: 12px;
+        left: 12px;
+        padding: 7px 12px;
+    }
+
+    .app_view_toggle_current,
+    .app_view_toggle_arrow {
+        display: none;
+    }
+}
+
+/* ══════════ 가계부 (ledger_view) ══════════ */
+.ledger_view {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 0 auto;
+    max-width: 1400px;
+}
+
+/* ── 헤더 · 월 이동 ── */
+.ledger_head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.ledger_month {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ledger_month_title {
+    margin: 0;
+    min-width: 132px;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-strong);
+    text-align: center;
+}
+
+.ledger_month_nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: var(--bg-panel-soft);
+    color: var(--text-base);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.14s ease, color 0.14s ease;
+}
+
+.ledger_month_nav:hover {
+    border-color: var(--blue);
+    color: var(--text-strong);
+}
+
+.ledger_month_picker {
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--bg-cell);
+    color: var(--text-base);
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.ledger_month_today {
+    padding: 7px 14px;
+    border: 1px solid rgba(91, 140, 255, 0.45);
+    border-radius: 999px;
+    background: rgba(91, 140, 255, 0.14);
+    color: #cfdcff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ledger_head_note {
+    font-size: 13px;
+    color: var(--text-mute);
+}
+
+/* ── 월 요약 카드 ── */
+.ledger_summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.ledger_summary_card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 22px 24px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(160deg, var(--bg-panel-soft) 0%, var(--bg-panel) 100%);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
+}
+
+.ledger_summary_label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-mute);
+}
+
+.ledger_summary_value {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+.ledger_summary_value_plus {
+    color: #7ff0c6;
+}
+
+.ledger_summary_value_minus {
+    color: #ff8f8f;
+}
+
+/* ── 입력 폼 ── */
+.ledger_form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--bg-panel);
+}
+
+.ledger_field {
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--bg-cell);
+    color: var(--text-base);
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.ledger_field:focus {
+    outline: none;
+    border-color: var(--blue);
+}
+
+.ledger_field_memo {
+    flex: 1 1 200px;
+    min-width: 140px;
+}
+
+.ledger_field_amount {
+    width: 140px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.ledger_submit {
+    padding: 10px 22px;
+    border: 1px solid rgba(91, 140, 255, 0.5);
+    border-radius: var(--radius-sm);
+    background: rgba(91, 140, 255, 0.18);
+    color: #dbe6ff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.14s ease;
+}
+
+.ledger_submit:hover:not(:disabled) {
+    background: rgba(91, 140, 255, 0.3);
+}
+
+.ledger_submit:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ── 패널 공통 (고정비 · 카드 정산) ── */
+.ledger_fixed_panel,
+.ledger_card_panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px 22px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(160deg, var(--bg-panel-soft) 0%, var(--bg-panel) 100%);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
+}
+
+.ledger_section_head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.ledger_section_title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text-strong);
+}
+
+.ledger_section_note {
+    font-size: 13px;
+    color: var(--text-mute);
+}
+
+/* 할부 월 납입금 미리보기 */
+.ledger_form_hint {
+    flex-basis: 100%;
+    font-size: 13px;
+    color: #cfdcff;
+}
+
+.ledger_field_months {
+    width: 84px;
+    text-align: right;
+}
+
+/* ── 고정비 목록 ── */
+.ledger_fixed_list {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--bg-panel);
+    overflow: hidden;
+}
+
+.ledger_fixed_row {
+    display: grid;
+    grid-template-columns: 54px minmax(0, 1fr) minmax(0, 1fr) 104px 132px 26px 26px;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.ledger_fixed_row:last-child {
+    border-bottom: none;
+}
+
+.ledger_fixed_row:hover {
+    background: var(--bg-panel-soft);
+}
+
+/* 이번 달 청구가 없는 건 — 끝난 할부 / 시작 전 고정비 */
+.ledger_fixed_row_inactive {
+    opacity: 0.45;
+}
+
+/* 지금 위 폼에 올라가 있는 행 — 어느 건을 고치는 중인지 표시 */
+.ledger_fixed_row_editing {
+    opacity: 1;
+    background: rgba(91, 140, 255, 0.14);
+    box-shadow: inset 3px 0 0 var(--blue);
+}
+
+/* 수정 버튼 — 행에 올렸을 때만 노출 */
+.ledger_fixed_edit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-mute);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.14s ease, background 0.14s ease, color 0.14s ease;
+}
+
+.ledger_fixed_row:hover .ledger_fixed_edit,
+.ledger_fixed_row_editing .ledger_fixed_edit {
+    opacity: 1;
+}
+
+.ledger_fixed_edit:hover {
+    background: rgba(91, 140, 255, 0.2);
+    color: #cfdcff;
+}
+
+/* 수정 중인 폼 — 신규 등록과 구분되게 테두리를 준다 */
+.ledger_form_editing {
+    border-color: rgba(91, 140, 255, 0.55);
+    background: rgba(91, 140, 255, 0.08);
+}
+
+/* 수정 취소 버튼 */
+.ledger_cancel {
+    padding: 10px 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--bg-panel-soft);
+    color: var(--text-base);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.14s ease, color 0.14s ease;
+}
+
+.ledger_cancel:hover {
+    border-color: var(--blue);
+    color: var(--text-strong);
+}
+
+.ledger_fixed_type {
+    padding: 3px 0;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.ledger_fixed_type_recurring {
+    border: 1px solid rgba(91, 140, 255, 0.42);
+    background: rgba(91, 140, 255, 0.14);
+    color: #cfdcff;
+}
+
+.ledger_fixed_type_installment {
+    border: 1px solid rgba(167, 139, 250, 0.45);
+    background: rgba(167, 139, 250, 0.16);
+    color: #d6c7ff;
+}
+
+.ledger_fixed_name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-base);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ledger_fixed_meta {
+    font-size: 13px;
+    color: var(--text-mute);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ledger_fixed_round {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--violet);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.ledger_fixed_amount {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ff9f9f;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.ledger_fixed_row:hover .ledger_row_remove {
+    opacity: 1;
+}
+
+/* ── 카드 정산 ── */
+.ledger_card_add {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ledger_card_list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.ledger_card_item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--bg-panel);
+}
+
+.ledger_card_item_head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 2px;
+}
+
+.ledger_card_name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-strong);
+}
+
+.ledger_card_remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-mute);
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.14s ease, color 0.14s ease;
+}
+
+.ledger_card_remove:hover {
+    background: rgba(255, 122, 122, 0.18);
+    color: #ff8f8f;
+}
+
+.ledger_card_row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.ledger_card_row_label {
+    font-size: 14px;
+    color: var(--text-mute);
+}
+
+.ledger_card_row_value {
+    font-size: 15px;
+    color: var(--text-base);
+    font-variant-numeric: tabular-nums;
+}
+
+.ledger_card_total {
+    width: 150px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 실제 사용액 — 결과 줄만 위에 구분선을 둔다 */
+.ledger_card_row_result {
+    padding-top: 8px;
+    border-top: 1px solid var(--line-soft);
+}
+
+.ledger_card_actual {
+    font-size: 17px;
+    font-weight: 800;
+    color: #ffe6bd;
+}
+
+/* 할부가 청구 총액보다 큰 경우 — 입력이 어긋났다는 신호 */
+.ledger_card_actual_invalid {
+    color: #ff8f8f;
+}
+
+.ledger_card_note {
+    font-size: 12px;
+    color: var(--text-mute);
+}
+
+/* ── 본문 — 목록 + 분류별 지출 ── */
+.ledger_body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
+    align-items: start;
+}
+
+.ledger_list {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--bg-panel);
+    overflow: hidden;
+}
+
+.ledger_row {
+    display: grid;
+    grid-template-columns: 56px 50px 96px minmax(0, 1fr) 140px 28px;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.ledger_row:last-child {
+    border-bottom: none;
+}
+
+.ledger_row:hover {
+    background: var(--bg-panel-soft);
+}
+
+.ledger_row_date {
+    font-size: 13px;
+    color: var(--text-mute);
+    font-variant-numeric: tabular-nums;
+}
+
+.ledger_row_kind {
+    padding: 3px 0;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.ledger_row_kind_income {
+    border: 1px solid rgba(53, 209, 154, 0.4);
+    background: rgba(53, 209, 154, 0.14);
+    color: #8fe3c4;
+}
+
+.ledger_row_kind_expense {
+    border: 1px solid rgba(255, 122, 122, 0.38);
+    background: rgba(255, 122, 122, 0.13);
+    color: #ff9f9f;
+}
+
+.ledger_row_category {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-base);
+    white-space: nowrap;
+}
+
+.ledger_row_memo {
+    font-size: 14px;
+    color: var(--text-mute);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ledger_row_amount {
+    font-size: 15px;
+    font-weight: 700;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.ledger_row_amount_income {
+    color: #7ff0c6;
+}
+
+.ledger_row_amount_expense {
+    color: #ff9f9f;
+}
+
+.ledger_row_remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-mute);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.14s ease, background 0.14s ease, color 0.14s ease;
+}
+
+.ledger_row:hover .ledger_row_remove {
+    opacity: 1;
+}
+
+.ledger_row_remove:hover {
+    background: rgba(255, 122, 122, 0.18);
+    color: #ff8f8f;
+}
+
+.ledger_empty {
+    margin: 0;
+    padding: 34px 18px;
+    color: var(--text-mute);
+    font-size: 14px;
+    text-align: center;
+}
+
+/* ── 분류별 지출 ── */
+.ledger_category_panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--bg-panel);
+}
+
+.ledger_category_title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-strong);
+}
+
+.ledger_category_row {
+    display: grid;
+    grid-template-columns: 1fr 48px;
+    align-items: center;
+    gap: 4px 10px;
+}
+
+.ledger_category_head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    grid-column: 1 / -1;
+}
+
+.ledger_category_name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-base);
+}
+
+.ledger_category_amount {
+    font-size: 14px;
+    color: var(--text-mute);
+    font-variant-numeric: tabular-nums;
+}
+
+.ledger_category_bar {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--bg-cell);
+    overflow: hidden;
+}
+
+.ledger_category_bar_fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #ff7a7a, #ffb648);
+}
+
+.ledger_category_ratio {
+    font-size: 12px;
+    color: var(--text-mute);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1100px) {
+    /* 분류별 지출 패널을 목록 아래로 내린다 */
+    .ledger_body {
+        grid-template-columns: 1fr;
+    }
+
+    .ledger_summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* 고정비 목록 — 카드/분류 메타를 접고 핵심만 남긴다 */
+    .ledger_fixed_row {
+        grid-template-columns: 54px minmax(0, 1fr) 96px 120px 26px 26px;
+    }
+
+    .ledger_fixed_meta {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .ledger_summary {
+        grid-template-columns: 1fr;
+    }
+
+    /* 좁은 화면에서는 내용 메모를 접고 금액 위주로 읽는다 */
+    .ledger_row {
+        grid-template-columns: 48px 46px 1fr 120px 24px;
+    }
+
+    .ledger_row_memo {
         display: none;
     }
 }

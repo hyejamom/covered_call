@@ -58,6 +58,10 @@ export interface SimulationConstants {
     taxThresholdKrw: number
     /** 원천징수 세율 (%) */
     taxRatePercent: number
+    /** 연 물가상승률 (%) — 미래 배당금을 기준연도 화폐가치로 되돌릴 때 쓰는 할인율 */
+    inflationRatePercent: number
+    /** 실질가치 환산 기준연도 — 이 해 1월의 화폐가치를 1로 본다 */
+    inflationBaseYear: number
 }
 
 /** 월별 시뮬레이션 결과 1건 */
@@ -77,6 +81,11 @@ export interface MonthlyResult {
     dividendTax: number
     /** 이번 달 배당금 세후 (원) — 재투자 구간이면 즉시 재투자, 아니면 인출 */
     dividendNet: number
+    /**
+     * 이번 달 세후 배당금을 기준연도(inflationBaseYear) 화폐가치로 환산한 금액 (원).
+     * 명목 금액에 물가 할인계수를 곱한 값이며, 시뮬레이션 계산 자체에는 관여하지 않는 표시 전용 지표다.
+     */
+    dividendReal: number
     /** 이번 달 배당을 재투자했는지 — false면 인출되어 보유주/잔액에 반영되지 않는다 */
     reinvested: boolean
     /** 이번 달 주식 매수에 사용한 금액 (원) */

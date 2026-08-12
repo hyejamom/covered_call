@@ -58,7 +58,7 @@ function EventRow(props: EventRowProps) {
 
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     // 1) 타입별 입력 가능 필드 판정 (재투자 구간은 전용 섹션에서 다루므로 여기 오지 않는다)
-    const isInitial = props.event.type === EventType.INITIAL
+    // const isInitial = props.event.type === EventType.INITIAL
     const isStop = props.event.type === EventType.RECURRING_STOP
     const hasEndYm = usesEndYm(props.event.type)
 
@@ -121,9 +121,9 @@ function EventRow(props: EventRowProps) {
     }
 
     /** 정기분 포함 여부 토글 — @param checked 체크 상태 */
-    const handleIncludesRecurringChange = (checked: boolean) => {
-        props.onChange(props.event.id, { includesRecurring: checked })
-    }
+    // const handleIncludesRecurringChange = (checked: boolean) => {
+    //     props.onChange(props.event.id, { includesRecurring: checked })
+    // }
 
     /** 이벤트 삭제 */
     const handleRemove = () => {
@@ -168,27 +168,27 @@ function EventRow(props: EventRowProps) {
                     value={props.event.amount}
                     onChange={(e) => handleAmountChange(e.target.value)}
                 />
-                {isStop ? (
-                    <span className={'event_hint event_hint_stop'}>
+            </div>
+            {isStop ? (
+                <span className={'event_hint event_hint_stop'}>
                         {recurringBase > 0
                             ? `−${formatKrw(props.event.amount)}원 · 최대 ${formatKrw(stopCapacity)}원 (정기 ${formatKrw(recurringBase)}원)`
                             : '이 시점에 정기 매수가 없습니다'}
                     </span>
-                ) : (
-                    <span className={'event_hint'}>{formatKrw(props.event.amount)}원</span>
-                )}
-            </div>
+            ) : (
+                <span className={'event_hint'}>{formatKrw(props.event.amount)}원</span>
+            )}
 
             {/* 5) 초기 일시금 전용 옵션 — 일시금에 그 달 정기분이 포함되어 중복 가산을 막을지 */}
-            <label className={`event_check ${isInitial ? '' : 'event_check_off'}`}>
-                <input
-                    type={'checkbox'}
-                    checked={props.event.includesRecurring}
-                    disabled={!isInitial}
-                    onChange={(e) => handleIncludesRecurringChange(e.target.checked)}
-                />
-                <span>정기분 포함</span>
-            </label>
+            {/*<label className={`event_check ${isInitial ? '' : 'event_check_off'}`}>*/}
+            {/*    <input*/}
+            {/*        type={'checkbox'}*/}
+            {/*        checked={props.event.includesRecurring}*/}
+            {/*        disabled={!isInitial}*/}
+            {/*        onChange={(e) => handleIncludesRecurringChange(e.target.checked)}*/}
+            {/*    />*/}
+            {/*    <span>정기분 포함</span>*/}
+            {/*</label>*/}
 
             {/* 6) 삭제 */}
             <button className={'event_remove'} type={'button'} onClick={handleRemove}>✕</button>
@@ -262,6 +262,16 @@ function FilterPanel(props: FilterPanelProps) {
                     <span className={'sim_meta_item'}>
                         <span className={'sim_meta_key'}>원천징수</span>
                         <span className={'sim_meta_value'}>{props.constants.taxRatePercent}%</span>
+                    </span>
+                    <span
+                        className={'sim_meta_item'}
+                        title={`그리드의 "배당금(${props.constants.inflationBaseYear}년 가치)" 행에만 쓰이는 값입니다.`
+                            + ' 미래에 받을 배당이 지금 돈으로 얼마인지 환산할 뿐, 매수·재투자 계산에는 영향을 주지 않습니다.'}
+                    >
+                        <span className={'sim_meta_key'}>물가상승률</span>
+                        <span className={'sim_meta_value'}>
+                            연 {props.constants.inflationRatePercent}% ({props.constants.inflationBaseYear}년 기준)
+                        </span>
                     </span>
                     <span className={'sim_meta_item sim_meta_item_source'} title={'주가·월배당·환율은 상단 카드의 실시간 조회값을 그대로 사용합니다'}>
                         <span className={'sim_meta_key'}>시세</span>

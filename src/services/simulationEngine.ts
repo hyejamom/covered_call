@@ -28,6 +28,25 @@ export function toYm(year: number, month: number): string {
     return `${year}-${String(month).padStart(2, '0')}`
 }
 
+/**
+ * 실질가치 환산 계수 — 그 달의 1원이 기준연도 1월 기준으로 몇 원어치인지
+ *
+ * 1) 기준연도 1월부터 흐른 개월 수를 세고
+ * 2) 연 물가상승률을 월 단위로 나눠 복리 할인한다.
+ *    연 단위로만 끊으면 12월 → 이듬해 1월에서 값이 계단식으로 꺾여 오해를 부르므로 매달 조금씩 줄어들게 한다.
+ * 3) 기준연도 이전 달은 지수가 음수가 되어 계수가 1보다 커진다 (그때 돈이 더 값어치 있었다는 뜻이라 의도한 동작).
+ * @param constants 물가상승률 · 기준연도를 담은 고정 상수
+ */
+export function toRealValueFactor(year: number, month: number, constants: SimulationConstants): number {
+    const rate = constants.inflationRatePercent / 100
+
+    // 물가상승률이 -100% 이하로 잘못 들어오면 지수 계산이 깨지므로 환산하지 않는다 (명목 = 실질)
+    if (rate <= -1) return 1
+
+    const elapsedMonths = (year - constants.inflationBaseYear) * 12 + (month - 1)
+    return 1 / Math.pow(1 + rate, elapsedMonths / 12)
+}
+
 /** 가용 현금으로 살 수 있는 주식 수 — 1주 단위 내림 (부동소수 오차로 1주 손실되는 것 방지) */
 function toBuyableShares(cash: number, sharePriceKrw: number): number {
     if (sharePriceKrw <= 0) return 0
@@ -198,7 +217,7 @@ function simulateYear(
         if (!active) {
             months.push({
                 ym, year, month, active: false,
-                contribution: 0, dividendGross: 0, dividendTax: 0, dividendNet: 0, reinvested: false,
+                contribution: 0, dividendGross: 0, dividendTax: 0, dividendNet: 0, dividendReal: 0, reinvested: false,
                 purchaseAmount: 0, cumulativePurchase: 0, shares: 0, balance: 0, taxed: false,
             })
             continue
@@ -210,6 +229,10 @@ function simulateYear(
             ? Math.floor(dividendGross * (constants.taxRatePercent / 100))
             : 0
         const dividendNet = dividendGross - dividendTax
+
+        // 2-1) 실질가치 환산 — 물가 할인계수를 곱해 기준연도 화폐가치로 되돌린다.
+        //      표시 전용 지표이므로 아래 매수/재투자 계산에는 명목 금액(dividendNet)을 그대로 쓴다.
+        const dividendReal = Math.floor(dividendNet * toRealValueFactor(year, month, constants))
 
         // 3) 이벤트 투입금 산출
         const contribution = calcContribution(events, ym)
@@ -231,7 +254,7 @@ function simulateYear(
 
         months.push({
             ym, year, month, active: true,
-            contribution, dividendGross, dividendTax, dividendNet, reinvested,
+            contribution, dividendGross, dividendTax, dividendNet, dividendReal, reinvested,
             purchaseAmount, cumulativePurchase, shares, balance,
             taxed: applyTax,
         })
