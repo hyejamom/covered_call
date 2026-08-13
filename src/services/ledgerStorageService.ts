@@ -3,6 +3,7 @@ import {
     LedgerKind,
     type CardStatement,
     type FixedCost,
+    type FixedIncome,
     type LedgerCard,
     type LedgerEntry,
 } from '../types/ledger'
@@ -18,8 +19,11 @@ import {
  */
 const STORAGE_KEY = 'call_ledger_state_v1'
 
-/** 현재 스냅샷 구조 버전 — 1: 입출금만, 2: 카드/고정비/명세서 추가 */
-const STORAGE_VERSION = 2
+/**
+ * 현재 스냅샷 구조 버전
+ * — 1: 입출금만 / 2: 카드·고정비·명세서 추가 / 3: 고정 수입 추가 / 4: 고정비 종료월(endYm) 추가
+ */
+const STORAGE_VERSION = 4
 
 /** localStorage에 직렬화되는 스냅샷 형태 */
 export interface SavedLedgerDto {
@@ -29,6 +33,7 @@ export interface SavedLedgerDto {
     entries: LedgerEntry[]
     cards: LedgerCard[]
     fixedCosts: FixedCost[]
+    fixedIncomes: FixedIncome[]
     statements: CardStatement[]
 }
 
@@ -37,11 +42,18 @@ export interface LedgerSnapshot {
     entries: LedgerEntry[]
     cards: LedgerCard[]
     fixedCosts: FixedCost[]
+    fixedIncomes: FixedIncome[]
     statements: CardStatement[]
 }
 
 /** 빈 가계부 */
-const EMPTY_SNAPSHOT: LedgerSnapshot = { entries: [], cards: [], fixedCosts: [], statements: [] }
+const EMPTY_SNAPSHOT: LedgerSnapshot = {
+    entries: [],
+    cards: [],
+    fixedCosts: [],
+    fixedIncomes: [],
+    statements: [],
+}
 
 // ┣━━━━━━━━━━━━━━━━ Validators ━━━━━━━━━━━━━━━━━┫
 
@@ -72,6 +84,8 @@ function isRestorableFixedCost(value: unknown): value is FixedCost {
     if (typeof value !== 'object' || value === null) return false
     const candidate = value as Partial<FixedCost>
 
+    // endYm 은 뒤에 추가된 필드라 여기서 요구하지 않는다.
+    // 옛 저장본에는 아예 없으므로 필수로 걸면 등록해 둔 고정비가 통째로 버려진다. (아래 toRestoredFixedCost 에서 채운다)
     return typeof candidate.id === 'string'
         && (candidate.type === FixedCostType.RECURRING || candidate.type === FixedCostType.INSTALLMENT)
         && typeof candidate.name === 'string'
@@ -79,6 +93,24 @@ function isRestorableFixedCost(value: unknown): value is FixedCost {
         && typeof candidate.category === 'string'
         && typeof candidate.startYm === 'string'
         && typeof candidate.months === 'number'
+        && typeof candidate.amount === 'number'
+        && Number.isFinite(candidate.amount)
+}
+
+/** 옛 저장본 보정 — endYm 이 없던 시절의 고정비는 '무기한'으로 이어받는다 */
+function toRestoredFixedCost(cost: FixedCost): FixedCost {
+    return { ...cost, endYm: typeof cost.endYm === 'string' ? cost.endYm : '' }
+}
+
+/** 고정 수입 1건이 복원 가능한 형태인지 */
+function isRestorableFixedIncome(value: unknown): value is FixedIncome {
+    if (typeof value !== 'object' || value === null) return false
+    const candidate = value as Partial<FixedIncome>
+
+    return typeof candidate.id === 'string'
+        && typeof candidate.name === 'string'
+        && typeof candidate.category === 'string'
+        && typeof candidate.startYm === 'string'
         && typeof candidate.amount === 'number'
         && Number.isFinite(candidate.amount)
 }
@@ -111,7 +143,7 @@ export function saveLedger(snapshot: LedgerSnapshot): void {
 
 /**
  * 저장된 가계부 로드
- * — v1(입출금만) 스냅샷은 카드/고정비를 빈 배열로 채워 그대로 이어받는다.
+ * — v1(입출금만) · v2(고정 수입 없음) 스냅샷은 없는 배열을 빈 배열로 채워 그대로 이어받는다.
  * @returns 복원된 상태. 저장 이력이 없거나 형식이 깨졌으면 빈 가계부
  */
 export function loadLedger(): LedgerSnapshot {
@@ -126,15 +158,27 @@ export function loadLedger(): LedgerSnapshot {
         const candidate = parsed as Partial<SavedLedgerDto>
         if (typeof candidate.version !== 'number' || candidate.version > STORAGE_VERSION) return EMPTY_SNAPSHOT
 
-        // 3) 항목 단위 검증 — 깨진 건만 걸러내고 나머지는 살린다.
-        //    v1 스냅샷에는 아래 세 배열이 아예 없으므로 자연히 빈 배열이 된다.
-        return {
-            entries: (candidate.entries ?? []).filter(isRestorableEntry),
-            cards: (candidate.cards ?? []).filter(isRestorableCard),
-            fixedCosts: (candidate.fixedCosts ?? []).filter(isRestorableFixedCost),
-            statements: (candidate.statements ?? []).filter(isRestorableStatement),
-        }
+        // 3) 항목 단위 검증 + 옛 필드 보정
+        return toRestoredSnapshot(candidate)
     } catch {
         return EMPTY_SNAPSHOT
+    }
+}
+
+/**
+ * 스냅샷 복원 — 깨진 항목만 걸러내고 옛 버전에 없던 필드를 채운다
+ *
+ * localStorage 와 서버 응답이 **같은 함수를 거치게** 하려고 밖으로 뺐다.
+ * 한쪽만 보정하면 다른 경로로 들어온 옛 기록이 undefined 를 달고 화면까지 나온다.
+ * @param candidate 저장본/응답 본문 (형태가 깨져 있어도 된다)
+ */
+export function toRestoredSnapshot(candidate: Partial<LedgerSnapshot>): LedgerSnapshot {
+    // 옛 버전 스냅샷에는 뒤에 붙은 배열이 아예 없으므로 자연히 빈 배열이 된다
+    return {
+        entries: (candidate.entries ?? []).filter(isRestorableEntry),
+        cards: (candidate.cards ?? []).filter(isRestorableCard),
+        fixedCosts: (candidate.fixedCosts ?? []).filter(isRestorableFixedCost).map(toRestoredFixedCost),
+        fixedIncomes: (candidate.fixedIncomes ?? []).filter(isRestorableFixedIncome),
+        statements: (candidate.statements ?? []).filter(isRestorableStatement),
     }
 }

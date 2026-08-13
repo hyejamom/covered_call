@@ -7,9 +7,16 @@ export const LEDGER_CATEGORIES: Record<LedgerKind, string[]> = {
     [LedgerKind.INCOME]: ['급여', '상여', '배당', '금융수익', '부수입', '기타수입'],
     [LedgerKind.EXPENSE]: [
         '식비', '주거/관리', '교통', '통신', '의료', '보험',
-        '교육', '문화/여가', '쇼핑', '경조사', '저축/투자', '기타지출',
+        '교육', '문화/여가', '여행', '쇼핑', '경조사', '저축/투자', '기타지출',
     ],
 }
+
+/**
+ * 생활비 분류명 — 사람이 고르는 값이 아니라 계산으로 채워지는 자리다.
+ * 카드로 쓴 돈 중 "따로 적어 둔 큰 지출"로 설명되지 않는 나머지를 여기로 몰아,
+ * 자잘한 결제를 한 건씩 적지 않아도 분류별 지출이 그 달 카드값 전체를 덮게 한다.
+ */
+export const LIVING_CATEGORY = '생활비'
 
 /** 구분 변경 시 기본으로 잡히는 분류 — 목록 첫 항목 */
 export function toDefaultCategory(kind: LedgerKind): string {

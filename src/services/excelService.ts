@@ -1,7 +1,9 @@
 import writeXlsxFile from 'write-excel-file/browser'
+import type { LedgerData } from '../types/ledger'
 import type { SimulationConstants } from '../types/simulation'
 import type { Workbook } from '../types/workbook'
 import { buildWorkbookSheets } from './excelSheetBuilder'
+import { buildLedgerSheets, toYmRange } from './ledgerExcelBuilder'
 
 /** 파일명에 쓸 수 없는 문자 — Windows/macOS 공통 금지 문자 */
 const INVALID_FILE_NAME_CHARS = /[\\/:*?"<>|]/g
@@ -49,4 +51,20 @@ export async function downloadAllWorkbooks(workbooks: Workbook[], constants: Sim
     for (const workbook of workbooks) {
         await downloadWorkbook(workbook, constants)
     }
+}
+
+/**
+ * 가계부를 엑셀 파일 1개로 내려받는다. — 고른 기간의 달마다 시트 1장
+ * @param data 가계부 원본 데이터 한 벌
+ * @param startYm 시작 월 'YYYY-MM'
+ * @param endYm 종료 월 'YYYY-MM'
+ */
+export async function downloadLedger(data: LedgerData, startYm: string, endYm: string): Promise<void> {
+    // 1) 기간 검증 — 시작이 종료보다 뒤면 만들 시트가 없다
+    const yms = toYmRange(startYm, endYm)
+    if (yms.length === 0) throw new Error('시작 월이 종료 월보다 뒤입니다')
+
+    // 2) 달별 시트 구성 후 브라우저 다운로드 트리거
+    const sheets = buildLedgerSheets(data, startYm, endYm)
+    await writeXlsxFile(sheets).toFile(`가계부_${startYm}_${endYm}.xlsx`)
 }

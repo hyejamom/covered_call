@@ -11,6 +11,11 @@ export default defineConfig({
                 target: 'http://localhost:3001',
                 changeOrigin: true,
             },
+            // 0-1) 저장 서버 — 가계부 보관 (server/data/ledger.json)
+            '/api/ledger': {
+                target: 'http://localhost:3001',
+                changeOrigin: true,
+            },
             // 1) Yahoo Finance — JEPQ 시세. CORS 헤더가 없어 개발 서버 프록시 경유
             '/api/yahoo': {
                 target: 'https://query1.finance.yahoo.com',

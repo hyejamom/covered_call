@@ -12,8 +12,13 @@ dist
 dist-ssr
 *.local
 
-# 저장 서버 스냅샷 (server/data/state.json)
-server/data
+# 저장 서버 데이터 (server/data)
+# 계산기 스냅샷(state.json)은 기기별 작업 상태라 추적하지 않는다.
+server/data/*
+server/data/*.tmp
+
+# 가계부는 예외 — git 으로 따라다녀야 다른 기기에서 pull 했을 때 그대로 펼쳐진다.
+!server/data/ledger.json
 
 # Editor directories and files
 .vscode/*

@@ -26,6 +26,12 @@ interface LedgerFixedCostPanelProps {
     onAddFixedCost: (draft: Omit<FixedCost, 'id'>) => void
     /** 고정비 수정 — @param id 대상 고정비, @param patch 폼 입력값 전체 */
     onUpdateFixedCost: (id: string, patch: Omit<FixedCost, 'id'>) => void
+    /** 선택된 달부터 금액 변경 — @param id 대상 고정비, @param amount 새 월 금액 */
+    onChangeFixedCostAmount: (id: string, amount: number) => void
+    /** 선택된 달부터 해지 — @param id 대상 고정비 */
+    onEndFixedCost: (id: string) => void
+    /** 해지 취소(무기한으로 되돌리기) — @param id 대상 고정비 */
+    onResumeFixedCost: (id: string) => void
     /** 고정비 삭제 — @param id 대상 고정비 */
     onRemoveFixedCost: (id: string) => void
 }
@@ -45,7 +51,9 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
     const [startYm, setStartYm] = useState<string>(props.selectedYm)           // 등록 폼 시작 월
     const [months, setMonths] = useState<string>('3')                          // 등록 폼 할부 개월 수
     const [amount, setAmount] = useState<string>('')                           // 등록 폼 금액 — 고정비는 월 금액, 할부는 총액
+    const [endYm, setEndYm] = useState<string>('')                             // 수정 중인 항목의 종료월 — 폼에 칸은 없고 저장 시 그대로 되돌려준다
     const [editingId, setEditingId] = useState<string | null>(null)            // 수정 중인 고정비 id. null이면 신규 등록 모드
+    const [changingId, setChangingId] = useState<string | null>(null)          // 금액 변경 중인 고정비 id — 선택된 달부터 새 금액을 적용한다
 
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     // 1) 입력값 파싱 — 할부는 개월 수까지 유효해야 등록할 수 있다
@@ -63,6 +71,11 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
 
     // 3) 그 달 청구분 조회용 색인 — 목록에서 "이번 달 청구 여부"를 바로 판정한다
     const chargeByCostId = new Map(props.charges.map((charge) => [charge.cost.id, charge]))
+
+    // 3-1) 금액 변경 중인 항목 — 폼 문구와 저장 동작이 통째로 바뀐다
+    const changingCost = changingId === null
+        ? null
+        : props.fixedCosts.find((cost) => cost.id === changingId) ?? null
 
     // 4) 청구되는 건을 위로 올린 목록 — 끝난 할부/시작 전 항목은 아래로 내린다
     const sortedCosts = [...props.fixedCosts].sort((a, b) => {
@@ -86,38 +99,81 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
         setAmount('')
     }
 
-    /** 수정 시작 — @param cost 수정할 고정비. 등록 폼에 값을 그대로 올려 같은 자리에서 고치게 한다 */
-    const handleStartEdit = (cost: FixedCost) => {
-        setEditingId(cost.id)
+    /** 폼에 항목 올리기 — @param cost 대상 고정비. 수정·금액 변경이 같은 폼을 쓰므로 채우는 값도 같다 */
+    const handleFillForm = (cost: FixedCost) => {
         setType(cost.type)
         setName(cost.name)
         setCardId(cost.cardId)
         setCategory(cost.category)
         setStartYm(cost.startYm)
+        setEndYm(cost.endYm)
         setMonths(cost.months > 0 ? String(cost.months) : '3')
         setAmount(String(cost.amount))
     }
 
-    /** 수정 취소 — 폼을 신규 등록 상태로 되돌린다 */
-    const handleCancelEdit = () => {
+    /** 수정 시작 — @param cost 수정할 고정비. 등록 폼에 값을 그대로 올려 같은 자리에서 고치게 한다 */
+    const handleStartEdit = (cost: FixedCost) => {
+        setChangingId(null)
+        setEditingId(cost.id)
+        handleFillForm(cost)
+    }
+
+    /**
+     * 금액 변경 시작 — @param cost 대상 고정비
+     * 수정과 달리 과거를 건드리지 않는다. 저장하면 전월까지로 끊고 이 달부터 새 금액으로 다시 시작한다.
+     */
+    const handleStartChange = (cost: FixedCost) => {
         setEditingId(null)
-        setName('')
+        setChangingId(cost.id)
+        handleFillForm(cost)
+        // 새로 적을 금액이라 비워 둔다 — 기존 금액이 남아 있으면 그대로 저장해 버리기 쉽다
         setAmount('')
     }
 
-    /** 고정비 삭제 — @param id 대상 고정비. 수정 중이던 건을 지우면 폼도 함께 초기화한다 */
+    /** 수정·변경 취소 — 폼을 신규 등록 상태로 되돌린다 */
+    const handleCancelEdit = () => {
+        setEditingId(null)
+        setChangingId(null)
+        setName('')
+        setAmount('')
+        setEndYm('')
+    }
+
+    /** 고정비 삭제 — @param id 대상 고정비. 폼에 올라가 있던 건을 지우면 폼도 함께 초기화한다 */
     const handleRemove = (id: string) => {
-        if (id === editingId) handleCancelEdit()
+        if (id === editingId || id === changingId) handleCancelEdit()
         props.onRemoveFixedCost(id)
     }
 
     /**
-     * 등록 / 수정 저장 — @param event 폼 제출 이벤트
-     * 신규는 항목명·금액만 비워 연속 입력을 잇고, 수정은 저장 후 신규 등록 모드로 빠져나온다.
+     * 해지 — @param cost 대상 고정비
+     * 선택된 달부터 안 빠지게 전월까지로 끊는다. 삭제와 다르다는 것을 확인 문구로 못 박는다.
+     */
+    const handleEnd = (cost: FixedCost) => {
+        const confirmed = window.confirm(
+            `'${cost.name}'를 ${formatYmTitle(props.selectedYm)}부터 해지합니다.`
+            + '\n이전 달들은 그대로 남습니다. (기록을 지우려면 × 를 쓰세요)',
+        )
+        if (!confirmed) return
+
+        if (cost.id === editingId || cost.id === changingId) handleCancelEdit()
+        props.onEndFixedCost(cost.id)
+    }
+
+    /**
+     * 등록 / 수정 저장 / 금액 변경 — @param event 폼 제출 이벤트
+     * 신규는 항목명·금액만 비워 연속 입력을 잇고, 수정·변경은 저장 후 신규 등록 모드로 빠져나온다.
      */
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
         if (!submittable) return
+
+        // 1) 금액 변경 — 나머지 값은 훅이 기존 항목에서 물려받으므로 새 금액만 넘긴다
+        if (changingId !== null) {
+            props.onChangeFixedCostAmount(changingId, Math.round(parsedAmount))
+            handleCancelEdit()
+            return
+        }
 
         const draft = {
             type,
@@ -125,6 +181,8 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
             cardId,
             category,
             startYm,
+            // 2) 종료월은 폼에 칸이 없다 — 수정 중이면 원래 값을 그대로 돌려주고, 신규는 무기한으로 시작한다
+            endYm: editingId === null ? '' : endYm,
             months: isInstallment ? Math.round(parsedMonths) : 0,
             amount: Math.round(parsedAmount),
         }
@@ -150,15 +208,19 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
                 </span>
             </div>
 
-            {/* 2) 등록/수정 폼 — 형태에 따라 개월 수 칸이 나타나고 금액의 의미가 바뀐다 */}
+            {/* 2) 등록/수정/변경 폼 — 형태에 따라 개월 수 칸이 나타나고 금액의 의미가 바뀐다.
+                    금액 변경 중에는 금액 칸만 열어 두고 나머지는 잠근다 (그 값들은 기존 항목에서 그대로 물려받는다) */}
             <form
-                className={editingId === null ? 'ledger_form' : 'ledger_form ledger_form_editing'}
+                className={editingId === null && changingId === null
+                    ? 'ledger_form'
+                    : 'ledger_form ledger_form_editing'}
                 onSubmit={handleSubmit}
             >
                 <select
                     className={'ledger_field'}
                     value={type}
                     onChange={handleTypeChange}
+                    disabled={changingId !== null}
                     title={'고정비 형태'}
                 >
                     {Object.values(FixedCostType).map((value) => (
@@ -172,11 +234,13 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
                     onChange={(event) => setName(event.target.value)}
                     placeholder={isInstallment ? '항목명 (예: 노트북 할부)' : '항목명 (예: 교통비)'}
                     maxLength={30}
+                    disabled={changingId !== null}
                 />
                 <select
                     className={'ledger_field'}
                     value={cardId}
                     onChange={(event) => setCardId(event.target.value)}
+                    disabled={changingId !== null}
                     title={'결제 카드'}
                 >
                     <option value={NO_CARD}>카드 없음</option>
@@ -188,6 +252,7 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
                     className={'ledger_field'}
                     value={category}
                     onChange={(event) => setCategory(event.target.value)}
+                    disabled={changingId !== null}
                     title={'분류'}
                 >
                     {LEDGER_CATEGORIES[LedgerKind.EXPENSE].map((value) => (
@@ -197,9 +262,12 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
                 <input
                     type={'month'}
                     className={'ledger_field'}
-                    value={startYm}
+                    value={changingId === null ? startYm : props.selectedYm}
                     onChange={(event) => setStartYm(event.target.value)}
-                    title={isInstallment ? '할부 1회차 달' : '고정비 시작 달'}
+                    disabled={changingId !== null}
+                    title={changingId !== null
+                        ? '이 달부터 새 금액이 적용됩니다'
+                        : (isInstallment ? '할부 1회차 달' : '고정비 시작 달')}
                 />
                 {isInstallment && (
                     <input
@@ -218,35 +286,50 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
                     className={'ledger_field ledger_field_amount'}
                     value={amount}
                     onChange={(event) => setAmount(event.target.value)}
-                    placeholder={isInstallment ? '할부 총액' : '월 금액'}
+                    placeholder={changingId !== null
+                        ? '바뀐 월 금액'
+                        : (isInstallment ? '할부 총액' : '월 금액')}
                     min={0}
                     step={1}
+                    autoFocus={changingId !== null}
                 />
                 <button
                     type={'submit'}
                     className={'ledger_submit'}
                     disabled={!submittable}
                     title={submittable
-                        ? (editingId === null ? '고정비를 등록합니다' : '수정 내용을 저장합니다')
+                        ? (changingId !== null
+                            ? `${formatYmTitle(props.selectedYm)}부터 새 금액으로 바꿉니다`
+                            : (editingId === null ? '고정비를 등록합니다' : '수정 내용을 저장합니다'))
                         : '항목명과 금액을 입력하세요'}
                 >
-                    {editingId === null ? '등록' : '수정 저장'}
+                    {changingId !== null ? '변경 적용' : (editingId === null ? '등록' : '수정 저장')}
                 </button>
 
-                {/* 2-1) 수정 중에만 노출 — 폼을 신규 등록 상태로 되돌린다 */}
-                {editingId !== null && (
+                {/* 2-1) 수정·변경 중에만 노출 — 폼을 신규 등록 상태로 되돌린다 */}
+                {(editingId !== null || changingId !== null) && (
                     <button
                         type={'button'}
                         className={'ledger_cancel'}
                         onClick={handleCancelEdit}
-                        title={'수정을 취소합니다'}
+                        title={'되돌립니다'}
                     >
                         취소
                     </button>
                 )}
 
-                {/* 2-2) 할부 월 납입금 미리보기 — 총액을 개월 수로 나눈 값 */}
-                {isInstallment && monthlyPreview > 0 && (
+                {/* 2-2) 금액 변경 안내 — 과거가 그대로 남는다는 점을 저장 전에 못 박는다 */}
+                {changingCost !== null && (
+                    <span className={'ledger_form_hint'}>
+                        &lsquo;{changingCost.name}&rsquo; — {formatYmTitle(props.selectedYm)}부터 새 금액으로 바뀝니다.
+                        {props.selectedYm > changingCost.startYm
+                            ? ` 이전 달은 ${formatKrw(changingCost.amount)}원으로 그대로 남습니다.`
+                            : ' (시작 월이라 가를 과거가 없어 금액만 고쳐집니다)'}
+                    </span>
+                )}
+
+                {/* 2-3) 할부 월 납입금 미리보기 — 총액을 개월 수로 나눈 값 */}
+                {changingId === null && isInstallment && monthlyPreview > 0 && (
                     <span className={'ledger_form_hint'}>
                         월 {formatKrw(monthlyPreview)}원 × {Math.round(parsedMonths)}개월
                         (나머지는 마지막 회차에 합산)
@@ -271,12 +354,17 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
                                 : cost.amount
                         )
 
-                        // 3-4) 행 상태 클래스 — 수정 중인 행은 강조하고, 청구 없는 행은 흐리게
+                        // 3-4) 행 상태 클래스 — 폼에 올라간 행은 강조하고, 청구 없는 행은 흐리게
                         const rowClass = [
                             'ledger_fixed_row',
                             inactive ? ' ledger_fixed_row_inactive' : '',
-                            cost.id === editingId ? ' ledger_fixed_row_editing' : '',
+                            cost.id === editingId || cost.id === changingId ? ' ledger_fixed_row_editing' : '',
                         ].join('')
+
+                        // 3-5) 진짜 고정비만 기간 개념이 있다 — 할부는 개월 수가 끝을 정한다
+                        const isRecurring = cost.type === FixedCostType.RECURRING
+                        // 종료월이 빈 값이면 무기한 — 옛 저장본에는 필드 자체가 없어 Boolean 으로 받는다
+                        const ended = isRecurring && Boolean(cost.endYm)
 
                         return (
                             <div key={cost.id} className={rowClass}>
@@ -290,34 +378,80 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
                                 <span className={'ledger_fixed_name'}>{cost.name}</span>
                                 <span className={'ledger_fixed_meta'}>{toCardName(cost.cardId)} · {cost.category}</span>
 
-                                {/* 3-3) 할부 진행 회차 — 시작 월 기준으로 몇 번째 달인지 */}
-                                <span className={'ledger_fixed_round'}>
+                                {/* 3-3) 청구 기간 — 할부는 진행 회차, 고정비는 시작·종료 월 */}
+                                <span
+                                    className={'ledger_fixed_round'}
+                                    title={ended
+                                        ? `${cost.startYm} ~ ${cost.endYm} 청구 후 종료`
+                                        : `${cost.startYm} 부터 매월 청구`}
+                                >
                                     {cost.type === FixedCostType.INSTALLMENT
                                         ? (charge !== undefined
                                             ? `${charge.round}/${cost.months}회차`
                                             : `종료 (${cost.months}개월)`)
-                                        : (inactive ? `${cost.startYm}~` : '매월')}
+                                        : ended
+                                            ? `~${cost.endYm}`
+                                            : (inactive ? `${cost.startYm}~` : '매월')}
                                 </span>
 
                                 <span className={'ledger_fixed_amount'}>
                                     {formatKrw(displayAmount)}원
                                 </span>
-                                <button
-                                    type={'button'}
-                                    className={'ledger_fixed_edit'}
-                                    onClick={() => handleStartEdit(cost)}
-                                    title={'이 고정비 수정 — 위 폼에 값이 올라옵니다'}
-                                >
-                                    ✎
-                                </button>
-                                <button
-                                    type={'button'}
-                                    className={'ledger_row_remove'}
-                                    onClick={() => handleRemove(cost.id)}
-                                    title={'이 고정비 삭제'}
-                                >
-                                    ×
-                                </button>
+
+                                {/* 3-6) 행 동작 — 수정(소급) / 이 달부터 변경 / 해지 / 삭제 */}
+                                <span className={'ledger_fixed_actions'}>
+                                    <button
+                                        type={'button'}
+                                        className={'ledger_fixed_edit'}
+                                        onClick={() => handleStartEdit(cost)}
+                                        title={'수정 — 잘못 적은 값을 과거까지 통째로 바로잡습니다'}
+                                    >
+                                        ✎
+                                    </button>
+
+                                    {/* 금액이 바뀐 시점부터만 반영하는 동작 — 진짜 고정비에만 있다 */}
+                                    {isRecurring ? (
+                                        <button
+                                            type={'button'}
+                                            className={'ledger_fixed_action'}
+                                            onClick={() => handleStartChange(cost)}
+                                            title={`${formatYmTitle(props.selectedYm)}부터 금액 변경 — 이전 달은 그대로 남습니다`}
+                                        >
+                                            변경
+                                        </button>
+                                    ): (<div style={{width: '40px'}}/>)}
+
+                                    {isRecurring ? (ended ? (
+                                        <button
+                                            type={'button'}
+                                            className={'ledger_fixed_action'}
+                                            onClick={() => props.onResumeFixedCost(cost.id)}
+                                            title={`${cost.endYm} 로 찍힌 종료를 취소하고 다시 매월 청구합니다`}
+                                        >
+                                            취소
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type={'button'}
+                                            className={'ledger_fixed_action'}
+                                            onClick={() => handleEnd(cost)}
+                                            title={`${formatYmTitle(props.selectedYm)}부터 해지 — 이전 달은 그대로 남습니다`}
+                                        >
+                                            해지
+                                        </button>
+                                    )): (
+                                        <div style={{width: '40px'}}/>
+                                    )}
+
+                                    <button
+                                        type={'button'}
+                                        className={'ledger_row_remove'}
+                                        onClick={() => handleRemove(cost.id)}
+                                        title={'삭제 — 과거 달에서도 사라집니다'}
+                                    >
+                                        ×
+                                    </button>
+                                </span>
                             </div>
                         )
                     })}

@@ -16,8 +16,9 @@ interface LedgerCardPanelProps {
 }
 
 /**
- * 카드 정산 패널 — 카드별로 "이번 달 명세서 총액"을 직접 적고, 할부를 걷어낸 실제 사용액을 확인한다.
- * 할부는 과거에 쓴 돈이 이번 달에 청구된 것이라, 빼야 이번 달에 새로 쓴 금액이 남는다.
+ * 카드 정산 패널 — 카드별로 "이번 달 명세서 총액"을 직접 적고, 자동 청구분을 걷어낸 실제 사용액을 확인한다.
+ * 할부는 과거에 쓴 돈이 이번 달에 청구된 것이고, 이 카드로 빠지는 고정비는 이미 고정비로 따로 잡혀 있다.
+ * 둘 다 빼야 이번 달에 카드로 새로 쓴 금액만 남는다.
  */
 function LedgerCardPanel(props: LedgerCardPanelProps) {
 
@@ -73,13 +74,13 @@ function LedgerCardPanel(props: LedgerCardPanelProps) {
                 </form>
             </div>
 
-            {/* 2) 카드별 정산 — 청구 총액(직접 입력) − 할부 = 실제 사용액 */}
+            {/* 2) 카드별 정산 — 청구 총액(직접 입력) − 할부 − 고정비 = 실제 사용액 */}
             {props.cardStatements.length === 0 ? (
                 <p className={'ledger_empty'}>등록된 카드가 없습니다. 카드를 먼저 등록하면 고정비·할부를 묶을 수 있습니다.</p>
             ) : (
                 <div className={'ledger_card_list'}>
                     {props.cardStatements.map((statement) => {
-                        // 2-1) 실제 사용액이 음수면 청구 총액을 잘못 적었거나 할부 등록이 어긋난 것 — 눈에 띄게 표시
+                        // 2-1) 실제 사용액이 음수면 청구 총액을 잘못 적었거나 할부·고정비 등록이 어긋난 것 — 눈에 띄게 표시
                         const invalid = statement.actual !== null && statement.actual < 0
 
                         return (
@@ -110,29 +111,35 @@ function LedgerCardPanel(props: LedgerCardPanelProps) {
                                     />
                                 </label>
 
-                                {/* 2-3) 자동 계산 — 그 달 할부 합계 */}
+                                {/* 2-3) 자동 계산 ① — 그 달 이 카드에 걸린 할부 합계 */}
                                 <div className={'ledger_card_row'}>
                                     <span className={'ledger_card_row_label'}>− 할부</span>
                                     <span className={'ledger_card_row_value'}>{formatKrw(statement.installment)}원</span>
                                 </div>
 
-                                {/* 2-4) 결과 — 이번 달에 새로 쓴 금액 */}
+                                {/* 2-4) 자동 계산 ② — 이 카드로 결제되는 고정비 합계. 명세서 총액에 이미 섞여 있으니 함께 걷어낸다 */}
+                                <div className={'ledger_card_row'}>
+                                    <span className={'ledger_card_row_label'}>− 고정비</span>
+                                    <span className={'ledger_card_row_value'}>{formatKrw(statement.recurring)}원</span>
+                                </div>
+
+                                {/* 2-5) 결과 — 이번 달에 카드로 새로 쓴 금액 */}
                                 <div className={'ledger_card_row ledger_card_row_result'}>
                                     <span className={'ledger_card_row_label'}>= 실제 사용</span>
                                     <span
                                         className={invalid
                                             ? 'ledger_card_row_value ledger_card_actual ledger_card_actual_invalid'
                                             : 'ledger_card_row_value ledger_card_actual'}
-                                        title={invalid ? '할부 합계가 청구 총액보다 큽니다. 총액이나 할부 등록을 확인하세요.' : ''}
+                                        title={invalid ? '할부＋고정비 합계가 청구 총액보다 큽니다. 총액이나 고정비·할부 등록을 확인하세요.' : ''}
                                     >
                                         {statement.total === null ? '총액 입력 필요' : `${formatKrw(statement.actual ?? 0)}원`}
                                     </span>
                                 </div>
 
-                                {/* 2-5) 참고 — 이 카드로 빠지는 진짜 고정비. 실제 사용액에서 빼지 않고 알려만 준다 */}
-                                {statement.recurring > 0 && (
+                                {/* 2-6) 참고 — 자동으로 빠지는 몫이 얼마인지 한 줄로 요약 */}
+                                {statement.autoCharged > 0 && (
                                     <span className={'ledger_card_note'}>
-                                        이 중 고정비 {formatKrw(statement.recurring)}원 포함
+                                        자동 청구 {formatKrw(statement.autoCharged)}원 (할부 {formatKrw(statement.installment)}원 + 고정비 {formatKrw(statement.recurring)}원)
                                     </span>
                                 )}
                             </div>

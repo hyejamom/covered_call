@@ -1,0 +1,371 @@
+{
+  "version": 4,
+  "savedAt": "2026-08-13T06:52:45.498Z",
+  "entries": [
+    {
+      "date": "2026-07-13",
+      "kind": "EXPENSE",
+      "category": "의료",
+      "memo": "병원(손톱)",
+      "amount": 46500,
+      "id": "led_1786587330166_1"
+    },
+    {
+      "date": "2026-07-13",
+      "kind": "EXPENSE",
+      "category": "의료",
+      "memo": "약국(손톱)",
+      "amount": 73100,
+      "id": "led_1786587348336_3"
+    },
+    {
+      "date": "2026-07-17",
+      "kind": "EXPENSE",
+      "category": "여행",
+      "memo": "여행(송지호-이외)",
+      "amount": 107540,
+      "id": "led_1786587428351_5"
+    },
+    {
+      "date": "2026-07-29",
+      "kind": "EXPENSE",
+      "category": "여행",
+      "memo": "여행(워터파크-입장권)",
+      "amount": 72000,
+      "id": "led_1786588017156_7"
+    },
+    {
+      "date": "2026-07-11",
+      "kind": "EXPENSE",
+      "category": "여행",
+      "memo": "여행(송지호-숙소)",
+      "amount": 370000,
+      "id": "led_1786588210915_11"
+    },
+    {
+      "date": "2026-07-30",
+      "kind": "EXPENSE",
+      "category": "여행",
+      "memo": "여행(워터파크-이외)",
+      "amount": 6000,
+      "id": "led_1786588351379_13"
+    },
+    {
+      "date": "2026-08-06",
+      "kind": "EXPENSE",
+      "category": "경조사",
+      "memo": "선물(김미란)",
+      "amount": 24000,
+      "id": "led_1786595124616_15"
+    },
+    {
+      "date": "2026-07-31",
+      "kind": "EXPENSE",
+      "category": "의료",
+      "memo": "병원(귀물들어감)",
+      "amount": 11500,
+      "id": "led_1786595177931_17"
+    },
+    {
+      "date": "2026-07-06",
+      "kind": "EXPENSE",
+      "category": "교통",
+      "memo": "택시",
+      "amount": 7500,
+      "id": "led_1786595495180_19"
+    },
+    {
+      "date": "2026-07-10",
+      "kind": "EXPENSE",
+      "category": "교통",
+      "memo": "택시",
+      "amount": 5700,
+      "id": "led_1786595506731_21"
+    },
+    {
+      "date": "2026-07-13",
+      "kind": "EXPENSE",
+      "category": "교통",
+      "memo": "택시",
+      "amount": 6000,
+      "id": "led_1786595515923_23"
+    },
+    {
+      "date": "2026-07-22",
+      "kind": "EXPENSE",
+      "category": "교통",
+      "memo": "택시",
+      "amount": 5500,
+      "id": "led_1786595523580_25"
+    },
+    {
+      "date": "2026-08-01",
+      "kind": "EXPENSE",
+      "category": "교통",
+      "memo": "택시",
+      "amount": 9400,
+      "id": "led_1786595545187_27"
+    },
+    {
+      "date": "2026-08-05",
+      "kind": "EXPENSE",
+      "category": "교통",
+      "memo": "택시",
+      "amount": 5800,
+      "id": "led_1786595557546_29"
+    }
+  ],
+  "cards": [
+    {
+      "id": "card_1786518275692_3",
+      "name": "현대카드"
+    },
+    {
+      "id": "card_1786518281595_5",
+      "name": "삼성카드"
+    }
+  ],
+  "fixedCosts": [
+    {
+      "type": "RECURRING",
+      "name": "대명(정기)",
+      "cardId": "card_1786518281595_5",
+      "category": "저축/투자",
+      "startYm": "2026-07",
+      "months": 0,
+      "amount": 83200,
+      "id": "fix_1786523660527_7",
+      "endYm": ""
+    },
+    {
+      "type": "RECURRING",
+      "name": "교통비",
+      "cardId": "card_1786518281595_5",
+      "category": "교통",
+      "startYm": "2026-07",
+      "months": 0,
+      "amount": 60000,
+      "id": "fix_1786523677284_9",
+      "endYm": ""
+    },
+    {
+      "type": "RECURRING",
+      "name": "현대해상",
+      "cardId": "card_1786518281595_5",
+      "category": "보험",
+      "startYm": "2026-07",
+      "months": 0,
+      "amount": 83160,
+      "id": "fix_1786523696462_11",
+      "endYm": ""
+    },
+    {
+      "type": "RECURRING",
+      "name": "세라젬",
+      "cardId": "card_1786518281595_5",
+      "category": "쇼핑",
+      "startYm": "2026-07",
+      "months": 0,
+      "amount": 30000,
+      "id": "fix_1786523710422_13",
+      "endYm": ""
+    },
+    {
+      "type": "RECURRING",
+      "name": "통신비",
+      "cardId": "card_1786518275692_3",
+      "category": "통신",
+      "startYm": "2026-07",
+      "months": 0,
+      "amount": 125330,
+      "id": "fix_1786523728740_15",
+      "endYm": "2026-07"
+    },
+    {
+      "type": "RECURRING",
+      "name": "아빠보험비",
+      "cardId": "card_1786518275692_3",
+      "category": "보험",
+      "startYm": "2026-07",
+      "months": 0,
+      "amount": 108792,
+      "id": "fix_1786523752890_17",
+      "endYm": ""
+    },
+    {
+      "type": "RECURRING",
+      "name": "엄마보험비",
+      "cardId": "card_1786518275692_3",
+      "category": "보험",
+      "startYm": "2026-07",
+      "months": 0,
+      "amount": 107472,
+      "id": "fix_1786523763457_19",
+      "endYm": ""
+    },
+    {
+      "type": "INSTALLMENT",
+      "name": "르무통(어버이날선물)",
+      "cardId": "card_1786518281595_5",
+      "category": "경조사",
+      "startYm": "2026-05",
+      "months": 3,
+      "amount": 93900,
+      "id": "fix_1786523876390_23",
+      "endYm": ""
+    },
+    {
+      "type": "INSTALLMENT",
+      "name": "선글라스",
+      "cardId": "card_1786518275692_3",
+      "category": "쇼핑",
+      "startYm": "2026-06",
+      "months": 3,
+      "amount": 349800,
+      "id": "fix_1786523925503_25",
+      "endYm": ""
+    },
+    {
+      "type": "INSTALLMENT",
+      "name": "건강검진",
+      "cardId": "card_1786518275692_3",
+      "category": "의료",
+      "startYm": "2026-06",
+      "months": 3,
+      "amount": 349800,
+      "id": "fix_1786523945978_27",
+      "endYm": ""
+    },
+    {
+      "type": "INSTALLMENT",
+      "name": "G마켓(엄마물건)",
+      "cardId": "card_1786518275692_3",
+      "category": "쇼핑",
+      "startYm": "2026-05",
+      "months": 3,
+      "amount": 126900,
+      "id": "fix_1786523986462_29",
+      "endYm": ""
+    },
+    {
+      "type": "INSTALLMENT",
+      "name": "학점은행제",
+      "cardId": "card_1786518275692_3",
+      "category": "교육",
+      "startYm": "2026-07",
+      "months": 3,
+      "amount": 400200,
+      "id": "fix_1786524080914_35",
+      "endYm": ""
+    },
+    {
+      "type": "INSTALLMENT",
+      "name": "에어팟",
+      "cardId": "card_1786518281595_5",
+      "category": "쇼핑",
+      "startYm": "2026-07",
+      "months": 3,
+      "amount": 336660,
+      "id": "fix_1786524781255_1",
+      "endYm": ""
+    },
+    {
+      "type": "RECURRING",
+      "name": "엄마생활비",
+      "cardId": "",
+      "category": "경조사",
+      "startYm": "2026-07",
+      "months": 0,
+      "amount": 400000,
+      "id": "fix_1786524896737_1",
+      "endYm": ""
+    },
+    {
+      "type": "RECURRING",
+      "name": "주누생활비",
+      "cardId": "",
+      "category": "주거/관리",
+      "startYm": "2026-07",
+      "months": 0,
+      "amount": 200000,
+      "id": "fix_1786524985849_3",
+      "endYm": ""
+    },
+    {
+      "type": "RECURRING",
+      "name": "엄빠돈(저축)",
+      "cardId": "",
+      "category": "저축/투자",
+      "startYm": "2026-07",
+      "months": 0,
+      "amount": 50000,
+      "id": "fix_1786525002003_5",
+      "endYm": ""
+    },
+    {
+      "type": "RECURRING",
+      "name": "여행비",
+      "cardId": "",
+      "category": "문화/여가",
+      "startYm": "2026-07",
+      "months": 0,
+      "amount": 50000,
+      "id": "fix_1786525019121_7",
+      "endYm": ""
+    },
+    {
+      "type": "RECURRING",
+      "name": "청약",
+      "cardId": "",
+      "category": "저축/투자",
+      "startYm": "2026-07",
+      "months": 0,
+      "amount": 50000,
+      "id": "fix_1786525033731_9",
+      "endYm": ""
+    },
+    {
+      "type": "RECURRING",
+      "name": "통신비",
+      "cardId": "card_1786518275692_3",
+      "category": "통신",
+      "startYm": "2026-08",
+      "endYm": "2026-08",
+      "months": 0,
+      "amount": 125330,
+      "id": "fix_1786603939293_1"
+    },
+    {
+      "type": "RECURRING",
+      "name": "통신비",
+      "cardId": "card_1786518275692_3",
+      "category": "통신",
+      "startYm": "2026-09",
+      "endYm": "",
+      "months": 0,
+      "amount": 30000,
+      "id": "fix_1786603964654_3"
+    }
+  ],
+  "fixedIncomes": [
+    {
+      "name": "급여",
+      "category": "급여",
+      "startYm": "2026-07",
+      "amount": 3430950,
+      "id": "inc_1786586064692_1"
+    }
+  ],
+  "statements": [
+    {
+      "cardId": "card_1786518275692_3",
+      "ym": "2026-07",
+      "total": 2249024
+    },
+    {
+      "cardId": "card_1786518281595_5",
+      "ym": "2026-07",
+      "total": 447820
+    }
+  ]
+}

@@ -11,6 +11,7 @@ body,
     min-height: 100%;
 }
 
+/* 컨셉 크림 — App.css 의 --bg-page 와 같은 값. 루트가 그려지기 전 깜빡임을 막는다 */
 body {
-    background: #0e1220;
+    background: #f6e6cb;
 }

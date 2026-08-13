@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import './App.css'
-import AppViewToggle from './components/AppViewToggle'
+import AnalysisView from './components/AnalysisView'
+import AppTabBar from './components/AppTabBar'
 import ExcelDownloadButton from './components/ExcelDownloadButton'
 import FilterPanel from './components/FilterPanel'
 import LedgerView from './components/LedgerView'
 import SaveButton from './components/SaveButton'
 import WorkbookGroup from './components/WorkbookGroup'
-import { AppView, toOppositeView } from './constants/appViewConstants'
+import { AppView } from './constants/appViewConstants'
 import {
     MONTH_LABELS,
     MONTH_NUMBERS,
@@ -15,6 +16,7 @@ import {
     formatShareCount,
 } from './constants/gridConstants'
 import { INFLATION_POLICY, resolveConstants } from './constants/simulationDefaults'
+import { useLedger } from './hooks/useLedger'
 import { useMarketInfo } from './hooks/useMarketInfo'
 import { useWorkbooks } from './hooks/useWorkbooks'
 import { toYm } from './services/simulationEngine'
@@ -245,12 +247,16 @@ function YearBlock(props: YearBlockProps) {
 function App() {
 
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
-    const [view, setView] = useState<AppView>(AppView.COVERED_CALL)   // 최상위 화면 — 진입 시 적립 계산기
+    const [view, setView] = useState<AppView>(AppView.COVERED_CALL)   // 최상위 화면 — 진입 시 1페이지(계산기)
 
     // ┣━━━━━━━━━━━━━━━━ CustomHooks ━━━━━━━━━━━━━━━━┫
     // 시세·워크북 훅은 화면 전환과 무관하게 항상 살려 둔다.
     // 가계부로 갔다 오는 사이 언마운트되면 저장하지 않은 편집 내용이 통째로 날아가기 때문이다.
     const { quote, dividend, rate, dividendYield } = useMarketInfo()
+
+    // 가계부 상태도 여기서 한 번만 만든다 — 2페이지(가계부)와 3페이지(분석)가 같은 데이터를 봐야 하고,
+    // 탭을 오갈 때마다 훅이 다시 살아나면 localStorage 를 매번 되읽는 낭비가 생긴다.
+    const ledger = useLedger()
 
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     // 1) 시세 등락 방향 판정 — 상승/하락/보합
@@ -275,18 +281,18 @@ function App() {
 
     // ┣━━━━━━━━━━━━━━━━ Handlers ━━━━━━━━━━━━━━━━━━━┫
 
-    /** 화면 토글 — 적립 계산기 ↔ 가계부 */
-    const handleToggleView = () => {
-        setView(toOppositeView(view))
+    /** 탭 이동 — @param next 이동할 화면 (1 계산기 · 2 가계부 · 3 분석) */
+    const handleSelectView = (next: AppView) => {
+        setView(next)
     }
 
     return (
         <div className={'app_root'}>
-            {/* 0-1) 플로팅 화면 토글 — 화면 좌측 상단 고정 */}
-            <AppViewToggle view={view} onToggle={handleToggleView} />
+            {/* 0-1) 상단 탭 바 — 화면 상단 중앙 고정 */}
+            <AppTabBar view={view} onSelect={handleSelectView} />
 
             {/* 0-2) 플로팅 저장 버튼 — 화면 우측 상단 고정. 스크롤과 무관하게 항상 떠 있다.
-                    가계부 화면에서도 남겨 둬야 적립 계산기의 미저장 변경을 놓치지 않는다 */}
+                    가계부·분석 화면에서도 남겨 둬야 적립 계산기의 미저장 변경을 놓치지 않는다 */}
             <SaveButton
                 workbooks={workbook.workbooks}
                 activeTabId={workbook.activeTabId}
@@ -295,10 +301,13 @@ function App() {
                 onPersisted={workbook.handleMarkPersisted}
             />
 
-            {/* 0-3) 가계부 화면 — 적립 계산기와 완전히 별개의 데이터를 다룬다 */}
-            {view === AppView.LEDGER && <LedgerView />}
+            {/* 0-3) 2페이지 가계부 — 적립 계산기와 완전히 별개의 데이터를 다룬다 */}
+            {view === AppView.LEDGER && <LedgerView ledger={ledger} />}
 
-            {/* 0-4) 적립 계산기 화면 — 아래 1)~4) 블록이 한 덩어리다 */}
+            {/* 0-4) 3페이지 분석 — 차트를 걷어낸 빈 화면. 탭 전환만 되고 내용은 아직 없다 */}
+            {view === AppView.ANALYSIS && <AnalysisView />}
+
+            {/* 0-5) 1페이지 적립 계산기 — 아래 1)~4) 블록이 한 덩어리다 */}
             {view === AppView.COVERED_CALL && (
                 <>
                 {/* 1) 상단 요약 정보 — JEPQ 오늘 금액 / 배당률 / 오늘 환율 */}

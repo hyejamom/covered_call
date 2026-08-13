@@ -13,10 +13,11 @@ import { runWorkbookSimulation, toYm } from './simulationEngine'
 
 // ══════════ 스타일 상수 ══════════
 
-const COLOR_HEAD_BG = '#E5EBF8'      // 연도/월 헤더 배경
-const COLOR_LABEL_BG = '#F3F5FA'     // 항목 라벨 배경
-const COLOR_TAXED_BG = '#FDECEC'     // 과세 적용 연도 강조 배경
-const COLOR_BORDER = '#B9C4DC'       // 셀 테두리
+// 화면과 같은 컨셉 팔레트(A0937D · E7D4B5 · F6E6CB · B6C7AA)를 엑셀에도 그대로 쓴다
+const COLOR_HEAD_BG = '#E7D4B5'      // 연도/월 헤더 배경 — 탄
+const COLOR_LABEL_BG = '#F6E6CB'     // 항목 라벨 배경 — 크림
+const COLOR_TAXED_BG = '#F0DCAF'     // 과세 적용 연도 강조 배경 — 황토
+const COLOR_BORDER = '#A0937D'       // 셀 테두리 — 토프
 
 /** 엑셀 시트명 금지 문자 — : \ / ? * [ ] */
 const INVALID_SHEET_NAME_CHARS = /[:\\/?*[\]]/g
@@ -162,7 +163,7 @@ function buildSheetData(result: SimulationResult, birthYm: string, years: number
                         value: monthly[rowDef.field],
                         type: Number,
                         format: withdrawn ? `${rowDef.excelFormat}" (X)"` : rowDef.excelFormat,
-                        ...(withdrawn ? { textColor: '#8A93A6', fontStyle: 'italic' as const } : {}),
+                        ...(withdrawn ? { textColor: '#9C8558', fontStyle: 'italic' as const } : {}),
                     }
                 }),
             ]
