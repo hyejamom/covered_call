@@ -6,8 +6,10 @@ import { PriceZone, type PriceHistory, type TechnicalReport } from '../types/tec
 // 매달 적립하는 게 아니라 "괜찮은 값일 때만 사고 아니면 현금을 모으는" 방식이라,
 // 기준선을 느슨하게 잡으면 규칙이 있으나 마나 해진다. 그래서 두 선을 모두 200일선 하나에 건다.
 //
-//   매수선 = 200일선            장기 추세선까지 눌린 자리. 상장 이후 전체의 약 18% 기간만 열렸다.
+//   매수선 = 200일선            장기 추세선까지 눌린 자리. JEPQ 기준 상장 이후 전체의 약 18% 기간만 열렸다.
 //   매도선 = 200일선 + N%       상장 이후 이격도 상위 10%에 해당하는 과열 수준.
+//
+// 계산은 종목을 가리지 않는다. 넘어온 이력 하나만 보고 판정하므로 SPY 든 JEPQ 든 같은 잣대가 적용된다.
 //
 // [왜 200일선인가]
 //   상장 이후 실데이터로 "매달 매수 / 200일선 터치 / 이격도 하위 20% / 200일선 -3%"를 비교한 결과,
@@ -17,6 +19,7 @@ import { PriceZone, type PriceHistory, type TechnicalReport } from '../types/tec
 // [수정주가를 쓰지 않는 이유]
 //   JEPQ 는 연 10%대를 분배해 수정주가 200일선이 무보정보다 $2 이상 낮게 나온다.
 //   여기서 알고 싶은 것은 "내가 실제로 지불할 가격"이므로 무보정 종가로 계산한다.
+//   배당이 적은 SPY 는 두 값 차이가 작지만, 종목마다 기준을 바꾸면 비교가 안 되므로 규칙을 통일한다.
 
 // ┣━━━━━━━━━━━━━━━━ 상수 ━━━━━━━━━━━━━━━━━━━━━━┫
 
@@ -109,6 +112,7 @@ export function toTechnicalReport(history: PriceHistory): TechnicalReport {
     const yearRatio = yearSpan <= 0 ? 0.5 : Math.min(1, Math.max(0, (price - yearLow) / yearSpan))
 
     return {
+        symbol: history.symbol,
         asOf: history.asOf,
         price,
         sma200,

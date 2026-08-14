@@ -2549,23 +2549,23 @@
 /* ══════════ 3페이지 · 분석 (analysis_view) ══════════ */
 /*
  * 답하는 질문은 하나 — 지금 사도 되는 값인가.
- * 정보를 여러 상자에 흩지 않고 카드 한 장에 담고, 안에서는 선으로만 구획을 나눈다.
- * 폭은 가계부·계산기와 같은 1400px 을 따라가고, 내용이 적으므로 세로로 쌓지 않고 가로 3열로 편다.
+ * 정보를 여러 상자에 흩지 않고 종목당 카드 한 장에 담고, 안에서는 선으로만 구획을 나눈다.
+ * 폭은 가계부·계산기와 같은 1400px 을 따라가고, 카드 안 내용이 적으므로 가로 3열로 편다.
  *   머리띠 → [현재가·판정 | 매수 기준가 | 매도 기준가] → 위치 막대(전체 폭) → 근거
+ * 종목이 늘면 같은 카드를 세로로 쌓는다. 잣대가 같으므로 위아래로 눈만 옮기면 바로 비교된다.
  */
 .analysis_view {
     display: flex;
     flex-direction: column;
+    gap: 22px;
     margin: 0 auto;
     max-width: 1400px;
     width: 100%;
 }
 
+/* 조회 중·실패 안내 — 카드 안에 들어가므로 테두리 없이 자리만 지킨다 */
 .analysis_empty_page {
-    padding: 80px 18px;
-    border: 1px dashed var(--line);
-    border-radius: var(--radius-lg);
-    background: var(--bg-panel);
+    padding: 72px 18px;
     color: var(--text-mute);
     font-size: 14px;
     text-align: center;
@@ -2594,11 +2594,25 @@
     background: var(--sand);
 }
 
+/* 종목 코드와 설명을 왼쪽에 묶고, 기준일만 오른쪽 끝으로 민다 */
+.verdict_head_left {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
 .verdict_symbol {
     font-size: 14px;
     font-weight: 800;
     letter-spacing: 0.06em;
     color: var(--text-strong);
+}
+
+/* 무슨 종목인지 — 코드보다 한 톤 낮춰 코드가 먼저 읽히게 한다 */
+.verdict_symbol_name {
+    font-size: 12px;
+    color: var(--text-mute);
 }
 
 .verdict_asof {

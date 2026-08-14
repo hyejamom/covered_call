@@ -89,14 +89,6 @@ export interface ExchangeRateInfo {
 
 const SYMBOL = 'JEPQ'
 const YAHOO_URL = `/api/yahoo/v8/finance/chart/${SYMBOL}?range=1d&interval=1d`
-/**
- * 상장 이후 전체 일별 종가 + 배당 내역 — 기술적 지표를 직접 계산하는 데 쓴다.
- *
- * range=max 를 쓰면 interval=1d 를 줘도 Yahoo 가 주봉(1wk)으로 내려보낸다.
- * 그러면 "50일선"이 사실상 50주선이 되어 지표가 통째로 어긋나므로, period 로 기간을 직접 찍어 일봉을 강제한다.
- * (period1=0 → 상장일부터, period2 는 충분히 먼 미래)
- */
-const YAHOO_HISTORY_URL = `/api/yahoo/v8/finance/chart/${SYMBOL}?period1=0&period2=9999999999&interval=1d&events=div`
 const NASDAQ_URL = `/api/nasdaq/api/quote/${SYMBOL}/dividends?assetclass=etf`
 const EXCHANGE_RATE_URL = 'https://open.er-api.com/v6/latest/USD'
 
@@ -104,6 +96,19 @@ const EXCHANGE_RATE_URL = 'https://open.er-api.com/v6/latest/USD'
 const DIVIDEND_MONTHS = 12
 
 // ══════════ 유틸 ══════════
+
+/**
+ * 상장 이후 전체 일별 종가 + 배당 내역 조회 URL — 기술적 지표를 직접 계산하는 데 쓴다.
+ *
+ * range=max 를 쓰면 interval=1d 를 줘도 Yahoo 가 주봉(1wk)으로 내려보낸다.
+ * 그러면 "200일선"이 사실상 200주선이 되어 지표가 통째로 어긋나므로, period 로 기간을 직접 찍어 일봉을 강제한다.
+ * (period1=0 → 상장일부터, period2 는 충분히 먼 미래. SPY 처럼 1993년 상장이어도 일봉으로 온다)
+ *
+ * @param symbol 종목 코드
+ */
+function toHistoryUrl(symbol: string): string {
+    return `/api/yahoo/v8/finance/chart/${symbol}?period1=0&period2=9999999999&interval=1d&events=div`
+}
 
 /** "$0.70497" 형태의 금액 문자열에서 숫자만 추출 */
 function parseAmount(value: string): number {
@@ -194,13 +199,15 @@ export async function fetchExchangeRate(): Promise<ExchangeRateInfo> {
 }
 
 /**
- * 4) JEPQ 일별 종가 이력 조회 — Yahoo Finance chart 엔드포인트 (상장 이후 전체 + 배당 이벤트)
+ * 4) 일별 종가 이력 조회 — Yahoo Finance chart 엔드포인트 (상장 이후 전체 + 배당 이벤트)
  *
  * 지표 제공 사이트마다 이동평균·RSI 값이 다른 이유는 SMA/EMA 를 섞어 쓰거나 갱신 시점이 달라서다.
  * 그래서 지표 API 를 쓰지 않고 원본 종가만 받아 온 뒤 계산은 technicalEngine 에서 직접 한다.
+ *
+ * @param symbol 종목 코드 — 같은 계산을 여러 종목에 그대로 적용하므로 호출측이 정한다
  */
-export async function fetchPriceHistory(): Promise<PriceHistory> {
-    const response = await fetch(YAHOO_HISTORY_URL)
+export async function fetchPriceHistory(symbol: string): Promise<PriceHistory> {
+    const response = await fetch(toHistoryUrl(symbol))
     if (!response.ok) throw new Error(`시세 이력 조회 실패 (${response.status})`)
 
     const dto: YahooHistoryResponseDto = await response.json()
@@ -233,5 +240,5 @@ export async function fetchPriceHistory(): Promise<PriceHistory> {
     const lastClose = closes[closes.length - 1]
     const price = dtoResult.meta?.regularMarketPrice ?? lastClose.close
 
-    return { closes, dividends, price, asOf: lastClose.date }
+    return { symbol, closes, dividends, price, asOf: lastClose.date }
 }

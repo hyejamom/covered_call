@@ -17,6 +17,8 @@ export interface DividendEvent {
 
 /** 조회해 온 원본 시세 이력 — 상장 이후 전체 */
 export interface PriceHistory {
+    /** 조회한 종목 코드 — 판정 결과까지 그대로 실려 화면 표기에 쓰인다 */
+    symbol: string
     closes: DailyClose[]
     dividends: DividendEvent[]
     /** 가장 최근 종가 (혹은 장중 현재가) */
@@ -53,6 +55,8 @@ export const PRICE_ZONE_LABEL: Record<PriceZone, string> = {
  * 규칙을 한 축에 모아야 "무슨 근거로 산다는 건지"가 한 문장으로 설명된다.
  */
 export interface TechnicalReport {
+    /** 판정한 종목 코드 */
+    symbol: string
     /** 기준일 'YYYY-MM-DD' */
     asOf: string
     price: number
