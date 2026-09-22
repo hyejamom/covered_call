@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 import {
+    ERRAND_LABEL,
     LEDGER_CATEGORIES,
     LIVING_CATEGORY,
     formatDateShort,
@@ -209,6 +210,7 @@ function LedgerView(props: LedgerViewProps) {
                             fixedCosts: ledger.fixedCosts,
                             fixedIncomes: ledger.fixedIncomes,
                             statements: ledger.statements,
+                            errands: ledger.errands,
                         }}
                     />
                 </div>
@@ -236,7 +238,7 @@ function LedgerView(props: LedgerViewProps) {
                 </div>
                 <div
                     className={'ledger_summary_card'}
-                    title={'카드 명세서 총액에서 할부·고정비를 뺀 금액 — 이번 달 카드로 새로 쓴 돈'}
+                    title={'카드 명세서 총액에서 할부·고정비·엄마 심부름을 뺀 금액 — 이번 달 내 돈으로 카드에서 새로 쓴 돈'}
                 >
                     <span className={'ledger_summary_label'}>카드 사용</span>
                     <strong className={'ledger_summary_value ledger_summary_value_minus'}>
@@ -246,6 +248,12 @@ function LedgerView(props: LedgerViewProps) {
                     <span className={'ledger_summary_sub'}>
                         큰 지출 {formatKrw(ledger.summary.expense)}원 · 생활비 {formatKrw(ledger.summary.living)}원
                     </span>
+                    {/* 심부름으로 걷어낸 몫이 있는 달에만 한 줄 더 — 카드값과 요약이 안 맞아 보이는 것을 막는다 */}
+                    {ledger.summary.errand > 0 && (
+                        <span className={'ledger_summary_sub ledger_summary_sub_errand'}>
+                            {ERRAND_LABEL} {formatKrw(ledger.summary.errand)}원 제외
+                        </span>
+                    )}
                 </div>
                 <div className={'ledger_summary_card'} title={'고정비·할부 + 큰 지출 + 생활비'}>
                     <span className={'ledger_summary_label'}>총지출</span>
@@ -292,6 +300,8 @@ function LedgerView(props: LedgerViewProps) {
                 onAddCard={ledger.handleAddCard}
                 onRemoveCard={ledger.handleRemoveCard}
                 onChangeStatement={ledger.handleChangeStatement}
+                onAddErrand={ledger.handleAddErrand}
+                onRemoveErrand={ledger.handleRemoveErrand}
             />
 
             {/* 6) 입출금 입력/수정 폼 — 날짜 / 구분 / 분류 / 내용 / 금액 */}

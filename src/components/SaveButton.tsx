@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { saveRemoteState } from '../services/stateApiService'
 import { saveState, toStateSignature } from '../services/storageService'
-import type { PersistedMark } from '../services/storageService'
-import type { Workbook } from '../types/workbook'
+import type { AssetStateMap, PersistedMark } from '../services/storageService'
 
 // ┣━━━━━━━━━━━━━━━━ Constants ━━━━━━━━━━━━━━━━━━┫
 
@@ -33,10 +32,12 @@ function formatSavedAt(value: string): string {
 }
 
 interface SaveButtonProps {
-    /** 저장 대상 워크북 전체 목록 */
-    workbooks: Workbook[]
-    /** 저장 시점의 선택 탭 id */
-    activeTabId: string
+    /**
+     * 저장 대상 — 종목별 워크북 상태 한 벌.
+     * 지금 보고 있는 종목만이 아니라 두 종목을 통째로 올린다. 탭을 오가며 고친 내용을
+     * 한 번의 저장으로 함께 남겨야 다른 탭의 변경이 조용히 사라지지 않는다.
+     */
+    assets: AssetStateMap
     /** 마지막으로 영속화된 지문 + 시각 — 미저장 변경 여부 판정 기준 */
     persisted: PersistedMark
     /** 서버 스냅샷 합류 대기 중 여부 — 합류 전 저장은 막는다 */
@@ -58,8 +59,8 @@ function SaveButton(props: SaveButtonProps) {
     const [error, setError] = useState<string | null>(null)             // 저장 실패 메시지
 
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
-    // 1) 현재 상태 지문 — 마지막 저장 지문과 다르면 미저장 변경이 있는 것
-    const currentSignature = toStateSignature(props.workbooks, props.activeTabId)
+    // 1) 현재 상태 지문 — 마지막 저장 지문과 다르면 미저장 변경이 있는 것 (종목 두 칸을 통째로 비교한다)
+    const currentSignature = toStateSignature(props.assets)
     const dirty = currentSignature !== props.persisted.signature
 
     // 2) 저장 위치 배지 문구 — 마지막 저장이 서버까지 갔는지 표기
@@ -94,18 +95,18 @@ function SaveButton(props: SaveButtonProps) {
         // 1) 로컬 우선 저장 — 서버가 꺼져 있어도 작업 내용은 브라우저에 남긴다
         let localSavedAt: string | null = null
         try {
-            localSavedAt = saveState(props.workbooks, props.activeTabId).savedAt
+            localSavedAt = saveState(props.assets).savedAt
         } catch {
             // 용량 초과·사생활 보호 모드 — 판정은 아래 서버 저장 결과로 넘긴다
         }
 
         // 2) 서버 저장 — 저장 시각은 서버가 찍은 값을 정본으로 쓴다
         try {
-            const remote = await saveRemoteState(props.workbooks, props.activeTabId)
+            const remote = await saveRemoteState(props.assets)
 
             // 2-1) 로컬 캐시의 저장 시각을 서버 시각으로 다시 찍는다.
             //      로컬 시계와 서버 시계가 섞이면 다음 진입 때 최신본 판정이 어긋난다.
-            saveState(props.workbooks, props.activeTabId, remote.savedAt)
+            saveState(props.assets, remote.savedAt)
 
             props.onPersisted({ signature, at: remote.savedAt })
             setTarget(SaveTarget.REMOTE)

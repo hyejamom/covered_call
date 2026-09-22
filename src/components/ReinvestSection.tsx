@@ -1,4 +1,4 @@
-import { EventType, type InvestEvent } from '../types/simulation'
+import { EventType, type InvestEvent, InvestTarget } from '../types/simulation'
 import YearMonthPicker from './YearMonthPicker'
 
 // ┣━━━━━━━━━━━━━━━━ Constants ━━━━━━━━━━━━━━━━━━┫
@@ -92,6 +92,7 @@ function ReinvestSection(props: ReinvestSectionProps) {
             startYm: '',
             endYm: '',
             amount: 0,
+            target: InvestTarget.MAIN,
             includesRecurring: false,
             reinvest: true,
         })
@@ -104,7 +105,7 @@ function ReinvestSection(props: ReinvestSectionProps) {
                 <h3 className={'reinvest_title'}>배당 재투자 구간</h3>
                 <span className={'reinvest_desc'}>
                     지정하지 않은 기간은 재투자합니다 · 구간이 겹치면 나중에 시작한 구간이 우선 ·
-                    "재투자 X" 기간의 배당은 인출되어 매수·잔액에 반영되지 않습니다 (월 정기 매수는 계속)
+                    "재투자 X" 기간의 배당은 매수·잔액에 반영되지 않습니다 (월 정기 매수는 계속)
                 </span>
             </div>
 

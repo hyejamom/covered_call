@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { CalcAsset } from '../constants/assetConstants'
 import { downloadAllWorkbooks } from '../services/excelService'
 import type { SimulationConstants } from '../types/simulation'
 import type { Workbook } from '../types/workbook'
@@ -8,6 +9,8 @@ interface ExcelDownloadButtonProps {
     workbooks: Workbook[]
     /** 전 탭 공통 고정 상수 — 내보내기 시점의 시세로 다시 계산한다 */
     constants: SimulationConstants
+    /** 지금 보고 있는 종목 탭 — 파일명과 시트 안 표기가 종목별로 갈린다 */
+    asset: CalcAsset
     /** 그룹 내부에 놓이는 작은 아이콘 버튼 여부 */
     compact?: boolean
 }
@@ -26,7 +29,7 @@ function ExcelDownloadButton(props: ExcelDownloadButtonProps) {
         setDownloading(true)
         setError(null)
         try {
-            await downloadAllWorkbooks(props.workbooks, props.constants)
+            await downloadAllWorkbooks(props.workbooks, props.constants, props.asset)
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : '엑셀 생성에 실패했습니다')
         } finally {

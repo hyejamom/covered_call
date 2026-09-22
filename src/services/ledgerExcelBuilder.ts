@@ -1,6 +1,6 @@
 import type { Row, SheetData } from 'write-excel-file/browser'
 import { FIXED_COST_TYPE_LABEL, LedgerKind, type LedgerMonthReport } from '../types/ledger'
-import { formatDateShort, monthDiff, shiftYm } from '../constants/ledgerConstants'
+import { ERRAND_LABEL, formatDateShort, monthDiff, shiftYm } from '../constants/ledgerConstants'
 import { toMonthReport } from './ledgerEngine'
 import type { LedgerData } from '../types/ledger'
 import type { WorkbookSheet } from './excelSheetBuilder'
@@ -22,8 +22,8 @@ const COLOR_BORDER = '#A0937D'       // 셀 테두리 — 토프
 /** 원 단위 정수 서식 — 천단위 콤마 */
 const MONEY_FORMAT = '#,##0'
 
-/** 열 폭 — 6열 구성 (항목 / 분류 / 카드·메모 / 값1 / 값2 / 값3) */
-const COLUMNS = [{ width: 18 }, { width: 14 }, { width: 24 }, { width: 16 }, { width: 16 }, { width: 16 }]
+/** 열 폭 — 7열 구성 (항목 / 분류 / 카드·메모 / 값1 / 값2 / 값3 / 값4) */
+const COLUMNS = [{ width: 18 }, { width: 20 }, { width: 24 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }]
 
 // ┣━━━━━━━━━━━━━━━━ 셀 유틸 ━━━━━━━━━━━━━━━━━━━┫
 
@@ -107,6 +107,8 @@ function buildMonthSheet(report: LedgerMonthReport): SheetData {
     rows.push([textCell('고정 수입'), moneyCell(summary.fixedIncome)])
     rows.push([textCell('고정비 · 할부'), moneyCell(summary.fixed)])
     rows.push([textCell('카드 사용'), moneyCell(summary.cardUsed)])
+    // 1-1) 심부름으로 걷어낸 몫 — 위 카드 사용에서 이미 빠져 있다. 명세서 총액과 대조할 때 필요해 함께 적는다
+    if (summary.errand > 0) rows.push([textCell(`└ ${ERRAND_LABEL} (카드 사용에서 제외됨)`), moneyCell(summary.errand)])
     rows.push([textCell('└ 큰 지출 (직접 입력)'), moneyCell(summary.expense)])
     rows.push([textCell('└ 생활비 (나머지)'), moneyCell(summary.living)])
     rows.push([textCell('총지출', true), moneyCell(summary.total, true)])
@@ -149,7 +151,7 @@ function buildMonthSheet(report: LedgerMonthReport): SheetData {
         })
     }
 
-    // 4) 카드 정산 — 청구 총액에서 자동 청구분을 걷어낸 실제 사용액
+    // 4) 카드 정산 — 청구 총액에서 자동 청구분과 엄마 심부름을 걷어낸 실제 사용액
     if (report.cardStatements.length > 0) {
         rows.push([])
         rows.push([sectionCell('카드 정산')])
@@ -158,6 +160,7 @@ function buildMonthSheet(report: LedgerMonthReport): SheetData {
             headCell('청구 총액', 'right'),
             headCell('할부', 'right'),
             headCell('고정비', 'right'),
+            headCell(ERRAND_LABEL, 'right'),
             headCell('실제 사용', 'right'),
         ])
         report.cardStatements.forEach((statement) => {
@@ -166,8 +169,20 @@ function buildMonthSheet(report: LedgerMonthReport): SheetData {
                 moneyCell(statement.total),
                 moneyCell(statement.installment),
                 moneyCell(statement.recurring),
+                moneyCell(statement.errand),
                 moneyCell(statement.actual, true),
             ])
+
+            // 4-1) 심부름은 건별로 적어 둔 값이라 카드 줄 아래에 내역을 펼쳐 둔다 (엑셀에서 대조할 수 있게)
+            statement.errands.forEach((errand) => {
+                rows.push([
+                    textCell(''),
+                    textCell(`└ ${errand.memo === '' ? '(내용 없음)' : errand.memo}`),
+                    textCell(''),
+                    textCell(''),
+                    moneyCell(errand.amount),
+                ])
+            })
         })
     }
 

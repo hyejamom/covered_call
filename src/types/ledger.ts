@@ -114,6 +114,25 @@ export interface CardStatement {
     total: number
 }
 
+/**
+ * 대납 1건 — 내 카드로 긁혔지만 내 돈이 아닌 결제 (엄마 심부름으로 산 물건 등)
+ *
+ * 이 금액은 명세서 총액 안에 분명히 들어 있지만, 엄마 용돈(고정비 '엄마생활비')에서 그만큼 빠져
+ * 이미 다른 이름으로 한 번 지출에 잡혀 있다. 카드 사용액에 그대로 두면 같은 돈을 두 번 세는 셈이라
+ * 할부·고정비와 똑같이 청구 총액에서 걷어낸다.
+ */
+export interface CardErrand {
+    id: string
+    /** 결제된 카드 id */
+    cardId: string
+    /** 청구 월 'YYYY-MM' — 명세서에 찍힌 달 기준으로 적는다 */
+    ym: string
+    /** 내용 메모 — '약국 심부름', '마트 장보기' */
+    memo: string
+    /** 금액 (원) */
+    amount: number
+}
+
 // ┣━━━━━━━━━━━━━━━━ 파생(계산) 타입 ━━━━━━━━━━━━┫
 
 /** 특정 달에 실제로 청구되는 고정비 1건 */
@@ -136,7 +155,11 @@ export interface CardMonthlyStatement {
     recurring: number
     /** 그 달 이 카드로 자동 빠지는 합계 = 할부 + 고정비 */
     autoCharged: number
-    /** 실제 사용한 금액 = 청구 총액 - (할부 + 고정비). 총액 미입력이면 null */
+    /** 그 달 이 카드에 적어 둔 대납(엄마 심부름) 목록 — 입력 순서 그대로 */
+    errands: CardErrand[]
+    /** 그 달 이 카드의 대납 합계 */
+    errand: number
+    /** 실제 사용한 금액 = 청구 총액 - (할부 + 고정비) - 대납. 총액 미입력이면 null */
     actual: number | null
 }
 
@@ -158,8 +181,10 @@ export interface LedgerMonthSummary {
     expense: number
     /** 그 달 자동 청구되는 고정비 + 할부 합계 */
     fixed: number
-    /** 그 달 카드로 새로 쓴 금액 합계 = Σ(명세서 총액 - 그 카드의 할부·고정비) */
+    /** 그 달 카드로 새로 쓴 금액 합계 = Σ(명세서 총액 - 그 카드의 할부·고정비 - 대납) */
     cardUsed: number
+    /** 그 달 대납(엄마 심부름) 합계 — 카드 사용액에서 이미 빠진 금액. 얼마를 걷어냈는지 보여주는 용도 */
+    errand: number
     /** 생활비 = 카드 사용액 중 직접 입력한 큰 지출로 설명되지 않는 나머지 */
     living: number
     /** 총지출 = 고정비·할부 + 직접 입력 지출 + 생활비 */
@@ -186,6 +211,7 @@ export interface LedgerData {
     fixedCosts: FixedCost[]
     fixedIncomes: FixedIncome[]
     statements: CardStatement[]
+    errands: CardErrand[]
 }
 
 /**

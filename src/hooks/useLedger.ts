@@ -4,6 +4,7 @@ import {
     toCardStatements,
     toCardUsedOfMonth,
     toChargesOfMonth,
+    toErrandTotalOfMonth,
     toIncomesOfMonth,
     toLivingCost,
 } from '../services/ledgerEngine'
@@ -17,6 +18,7 @@ import {
 import {
     FixedCostType,
     LedgerKind,
+    type CardErrand,
     type CardMonthlyStatement,
     type CardStatement,
     type FixedCost,
@@ -69,6 +71,7 @@ function toSyncKey(snapshot: LedgerSnapshot): string {
         snapshot.fixedCosts,
         snapshot.fixedIncomes,
         snapshot.statements,
+        snapshot.errands,
     ])
 }
 
@@ -111,7 +114,8 @@ async function pushLedger(snapshot: LedgerSnapshot): Promise<PushResult> {
 
 /**
  * 가계부 상태 훅
- * — 입출금 항목 · 카드 · 고정비 · 고정 수입 · 카드 명세서 총액을 한 스냅샷으로 들고 있고, 선택된 달로 걸러 화면에 넘긴다.
+ * — 입출금 항목 · 카드 · 고정비 · 고정 수입 · 카드 명세서 총액 · 대납(엄마 심부름)을 한 스냅샷으로 들고 있고,
+ *   선택된 달로 걸러 화면에 넘긴다.
  * — 저장 버튼이 없다. 입력이 멎으면 서버 파일(server/data/ledger.json)로 올라가고,
  *   localStorage 에는 같은 내용을 즉시 복사해 둔다. 서버가 꺼져 있을 때 기록을 잃지 않기 위한 대비책이다.
  * — 진입 시에는 서버 파일이 이긴다. 다른 기기에서 git pull 로 받은 내용이 그대로 펼쳐져야 하기 때문이다.
@@ -125,6 +129,7 @@ export function useLedger() {
     const [fixedCosts, setFixedCosts] = useState<FixedCost[]>(snapshot.fixedCosts)    // 고정비 · 할부 정의
     const [fixedIncomes, setFixedIncomes] = useState<FixedIncome[]>(snapshot.fixedIncomes) // 고정 수입 정의 (급여 등)
     const [statements, setStatements] = useState<CardStatement[]>(snapshot.statements) // 카드별 월 청구 총액 (직접 입력)
+    const [errands, setErrands] = useState<CardErrand[]>(snapshot.errands)           // 대납(엄마 심부름) — 카드값에 섞인 남의 돈
     const [selectedYm, setSelectedYm] = useState<string>(todayYm())                   // 화면에 펼쳐 볼 달 'YYYY-MM'
     const [syncStatus, setSyncStatus] = useState<LedgerSyncStatus>(LedgerSyncStatus.LOADING) // 서버 저장 상태
     const [syncedAt, setSyncedAt] = useState<string | null>(null)                     // 서버가 확정한 마지막 저장 시각 (ISO)
@@ -156,6 +161,7 @@ export function useLedger() {
                     setFixedCosts(restored.fixedCosts)
                     setFixedIncomes(restored.fixedIncomes)
                     setStatements(restored.statements)
+                    setErrands(restored.errands)
 
                     // 기준은 받은 원문 그대로 잡는다 — 보정으로 내용이 달라진 옛 파일이면
                     // 아래 저장 효과가 곧바로 "채워진 형태"로 서버 파일을 한 번 갱신하고, 이후로는 조용해진다
@@ -168,7 +174,7 @@ export function useLedger() {
                 // 1-2) 서버에 아직 파일이 없다 — 빈 내용을 기준으로 잡아,
                 //      로컬에 뭔가 있으면 아래 저장 효과가 그것을 첫 파일로 올린다
                 syncedKeyRef.current = toSyncKey({
-                    entries: [], cards: [], fixedCosts: [], fixedIncomes: [], statements: [],
+                    entries: [], cards: [], fixedCosts: [], fixedIncomes: [], statements: [], errands: [],
                 })
                 setSyncStatus(LedgerSyncStatus.SAVED)
             } catch (caught) {
@@ -188,12 +194,12 @@ export function useLedger() {
         }
     }, [])
 
-    // 2) 자동 저장 — 다섯 중 무엇이 바뀌든 로컬에 즉시 복사하고, 입력이 멎으면 서버로 올린다
+    // 2) 자동 저장 — 여섯 중 무엇이 바뀌든 로컬에 즉시 복사하고, 입력이 멎으면 서버로 올린다
     useEffect(() => {
         // 2-1) 서버 조회가 끝나기 전에 올리면, 읽어 보지도 않은 서버 파일을 로컬 내용으로 덮어쓴다
         if (!hydrated) return
 
-        const snapshot: LedgerSnapshot = { entries, cards, fixedCosts, fixedIncomes, statements }
+        const snapshot: LedgerSnapshot = { entries, cards, fixedCosts, fixedIncomes, statements, errands }
 
         // 2-2) 로컬 복사 — 서버가 죽어 있어도 이 브라우저에서는 이어서 쓸 수 있게 한다
         try {
@@ -221,7 +227,7 @@ export function useLedger() {
 
         // 2-5) 저장이 나가기 전에 또 바뀌면 앞 예약을 버린다
         return () => window.clearTimeout(timer)
-    }, [hydrated, entries, cards, fixedCosts, fixedIncomes, statements])
+    }, [hydrated, entries, cards, fixedCosts, fixedIncomes, statements, errands])
 
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     // 1) 선택된 달의 입출금 항목만 추려 정렬 (React Compiler 가 자동 메모이제이션하므로 useMemo 를 쓰지 않는다)
@@ -237,11 +243,14 @@ export function useLedger() {
     const monthIncomes: FixedIncome[] = toIncomesOfMonth(fixedIncomes, selectedYm)
     const fixedIncomeTotal: number = monthIncomes.reduce((sum, income) => sum + income.amount, 0)
 
-    // 4) 카드별 정산 — 명세서 총액에서 자동 청구분을 걷어낸 실제 사용액
-    const cardStatements: CardMonthlyStatement[] = toCardStatements(cards, charges, statements, selectedYm)
+    // 4) 카드별 정산 — 명세서 총액에서 자동 청구분과 대납을 걷어낸 실제 사용액
+    const cardStatements: CardMonthlyStatement[] = toCardStatements(cards, charges, statements, errands, selectedYm)
 
     // 5) 그 달 카드로 새로 쓴 금액 — 명세서를 적어 넣은 카드만 잡힌다
-    const cardUsedTotal: number = toCardUsedOfMonth(charges, statements, selectedYm)
+    const cardUsedTotal: number = toCardUsedOfMonth(charges, statements, errands, selectedYm)
+
+    // 5-1) 그 달 대납 합계 — 위 카드 사용액에서 이미 빠진 금액. 얼마를 걷어냈는지 화면에 알리는 용도
+    const errandTotal: number = toErrandTotalOfMonth(errands, selectedYm)
 
     // 6) 월 요약 — "이번 달 얼마 남길 수 있나"를 세운다.
     //    직접 입력한 지출은 대개 카드로 긁은 큰 건이라 카드 사용액 안에 이미 있다.
@@ -257,6 +266,7 @@ export function useLedger() {
         expense: 0,
         fixed: fixedTotal,
         cardUsed: cardUsedTotal,
+        errand: errandTotal,
         living: 0,
         total: 0,
         net: 0,
@@ -299,7 +309,7 @@ export function useLedger() {
      * 서버를 뒤늦게 켠 경우, 다음 입력을 기다리지 않고 여기서 복구할 수 있게 한다.
      */
     const handleRetrySync = () => {
-        const snapshot: LedgerSnapshot = { entries, cards, fixedCosts, fixedIncomes, statements }
+        const snapshot: LedgerSnapshot = { entries, cards, fixedCosts, fixedIncomes, statements, errands }
         const key = toSyncKey(snapshot)
 
         setSyncStatus(LedgerSyncStatus.SAVING)
@@ -366,11 +376,13 @@ export function useLedger() {
     /**
      * 카드 삭제 — @param cardId 삭제할 카드 id
      * 그 카드에 물려 있던 고정비는 지우지 않고 "카드 없음"으로 떨어뜨린다. (기록 자체를 잃지 않도록)
+     * 반면 명세서 총액과 대납은 그 카드 없이는 의미가 없는 값이라 함께 지운다.
      */
     const handleRemoveCard = (cardId: string) => {
         setCards((prev) => prev.filter((card) => card.id !== cardId))
         setFixedCosts((prev) => prev.map((cost) => (cost.cardId === cardId ? { ...cost, cardId: '' } : cost)))
         setStatements((prev) => prev.filter((statement) => statement.cardId !== cardId))
+        setErrands((prev) => prev.filter((errand) => errand.cardId !== cardId))
     }
 
     /** 고정비/할부 추가 — @param draft 입력 폼에서 넘어온 값 (id 는 여기서 발급) */
@@ -476,6 +488,26 @@ export function useLedger() {
         })
     }
 
+    /**
+     * 대납 추가 — @param cardId 결제 카드, @param memo 내용, @param amount 금액 (원)
+     * 선택된 달에 대해서만 기록한다. 금액이 0 이하면 정산에 영향이 없으므로 넣지 않는다.
+     */
+    const handleAddErrand = (cardId: string, memo: string, amount: number) => {
+        if (!Number.isFinite(amount) || amount <= 0) return
+        setErrands((prev) => [...prev, {
+            id: nextId('err'),
+            cardId,
+            ym: selectedYm,
+            memo: memo.trim(),
+            amount: Math.round(amount),
+        }])
+    }
+
+    /** 대납 삭제 — @param id 삭제할 대납 id */
+    const handleRemoveErrand = (id: string) => {
+        setErrands((prev) => prev.filter((errand) => errand.id !== id))
+    }
+
     return {
         entries,
         monthEntries,
@@ -485,6 +517,7 @@ export function useLedger() {
         fixedIncomes,
         monthIncomes,
         statements,
+        errands,
         cardStatements,
         selectedYm,
         summary,
@@ -512,6 +545,8 @@ export function useLedger() {
         handleUpdateFixedIncome,
         handleRemoveFixedIncome,
         handleChangeStatement,
+        handleAddErrand,
+        handleRemoveErrand,
     }
 }
 

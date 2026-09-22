@@ -1,6 +1,12 @@
-import { ANALYSIS_SYMBOL_META, ANALYSIS_SYMBOL_ORDER, type AnalysisSymbol } from '../constants/analysisConstants'
+import {
+    ANALYSIS_SYMBOL_META,
+    ANALYSIS_SYMBOL_ORDER,
+    BASELINE_LABEL,
+    SELL_ZONE_LABEL,
+    type AnalysisSymbol,
+} from '../constants/analysisConstants'
 import { useTechnical } from '../hooks/useTechnical'
-import { PRICE_ZONE_LABEL, PriceZone, type TechnicalReport } from '../types/technical'
+import { Currency, PRICE_ZONE_LABEL, PriceZone, type TechnicalReport } from '../types/technical'
 
 /** 구간별 배너 클래스 — 싼 편은 세이지, 비싼 편은 테라코타 */
 const ZONE_CLASS: Record<PriceZone, string> = {
@@ -9,14 +15,16 @@ const ZONE_CLASS: Record<PriceZone, string> = {
     [PriceZone.EXPENSIVE]: 'zone_badge zone_badge_expensive',
 }
 
-/** 달러 표기 — @param value 금액 */
-function toUsd(value: number): string {
+/** 금액 표기 — @param value 금액 @param currency 거래소가 알려 준 통화 코드 */
+function toMoney(value: number, currency: string): string {
+    // 원화는 소수점 단위로 거래되지 않고 자릿수가 커서, 반올림 + 천 단위 구분으로 읽는다
+    if (currency === Currency.KRW) return `${Math.round(value).toLocaleString('ko-KR')}원`
     return `$${value.toFixed(2)}`
 }
 
 /**
  * 분석 화면 — "지금 사도 되는 값인가"만 답한다.
- * 종목별로 상장 이후 일별 종가를 받아 매수/매도 기준가 두 개로 압축해 카드 한 장씩 쌓는다.
+ * 종목별로 상장 이후 주별 종가를 받아 매수/매도 기준가 두 개로 압축해 카드 한 장씩 쌓는다.
  * 종목마다 조회·계산이 완전히 독립이라 카드가 각자 자기 훅을 돌린다(하나가 실패해도 나머지는 그려진다).
  */
 function AnalysisView() {
@@ -86,7 +94,7 @@ function VerdictCardHead(props: VerdictCardHeadProps) {
     return (
         <header className={'verdict_card_head'}>
             <span className={'verdict_head_left'}>
-                <span className={'verdict_symbol'}>{props.symbol}</span>
+                <span className={'verdict_symbol'}>{ANALYSIS_SYMBOL_META[props.symbol].ticker}</span>
                 <span className={'verdict_symbol_name'}>{ANALYSIS_SYMBOL_META[props.symbol].name}</span>
             </span>
             {props.asOf !== undefined && (
@@ -123,10 +131,10 @@ function PriceVerdict(props: PriceVerdictProps) {
 
     // 2) 한 줄 결론 — 지금 사야 하는지, 기다려야 하는지
     const action = report.zone === PriceZone.CHEAP
-        ? '200일선까지 눌렸습니다 — 모아 둔 현금을 넣는 자리'
+        ? `${BASELINE_LABEL}까지 눌렸습니다 — 모아 둔 현금을 넣는 자리`
         : report.zone === PriceZone.EXPENSIVE
             ? '과열 구간입니다 — 신규 매수를 멈추고 덜어낼지 판단할 자리'
-            : `${(report.gapToBuy * 100).toFixed(1)}% 더 빠져 ${toUsd(report.buyLevel)}에 닿으면 매수 — 그때까지 현금 보유`
+            : `${(report.gapToBuy * 100).toFixed(1)}% 더 빠져 ${toMoney(report.buyLevel, report.currency)}에 닿으면 매수 — 그때까지 현금 보유`
 
     return (
         // 판정 카드 한 장 — 머리띠 / 현재가 / 위치 막대 / 기준가 2열 / 근거 순으로 한 상자 안에 쌓는다
@@ -139,15 +147,15 @@ function PriceVerdict(props: PriceVerdictProps) {
             <div className={'verdict_card_body'}>
                 <div className={'verdict_col verdict_col_now'}>
                     <div className={'verdict_price_row'}>
-                        <strong className={'verdict_price'}>{toUsd(report.price)}</strong>
+                        <strong className={'verdict_price'}>{toMoney(report.price, report.currency)}</strong>
                         <span className={ZONE_CLASS[report.zone]}>{PRICE_ZONE_LABEL[report.zone]}</span>
                     </div>
                     <p className={'verdict_action'}>{action}</p>
                 </div>
 
                 <div className={'verdict_col level_col_buy'}>
-                    <span className={'level_label'}>이 값 이하면 매수 · 200일선</span>
-                    <strong className={'level_value'}>{toUsd(report.buyLevel)}</strong>
+                    <span className={'level_label'}>이 값 이하면 매수 · {BASELINE_LABEL}</span>
+                    <strong className={'level_value'}>{toMoney(report.buyLevel, report.currency)}</strong>
                     <span className={'level_gap'}>
                         {report.gapToBuy >= 0
                             ? `현재가에서 ${(report.gapToBuy * 100).toFixed(1)}% 아래`
@@ -157,9 +165,9 @@ function PriceVerdict(props: PriceVerdictProps) {
 
                 <div className={'verdict_col level_col_sell'}>
                     <span className={'level_label'}>
-                        이 값 이상이면 과열 · 200일선 +{(report.sellDisparity * 100).toFixed(1)}%
+                        이 값 이상이면 과열 · {BASELINE_LABEL} +{(report.sellDisparity * 100).toFixed(1)}%
                     </span>
-                    <strong className={'level_value'}>{toUsd(report.sellLevel)}</strong>
+                    <strong className={'level_value'}>{toMoney(report.sellLevel, report.currency)}</strong>
                     <span className={'level_gap'}>
                         {report.gapToSell >= 0
                             ? `현재가에서 ${(report.gapToSell * 100).toFixed(1)}% 위`
@@ -176,28 +184,28 @@ function PriceVerdict(props: PriceVerdictProps) {
                         <span className={'level_bar_marker'} style={{ left: `${markerPercent}%` }} />
                     </div>
                     <span className={'level_bar_now'} style={nowLabelStyle}>
-                        현재 {toUsd(report.price)}
+                        현재 {toMoney(report.price, report.currency)}
                     </span>
                 </div>
 
                 {/* 3-2) 양 끝 눈금 — 막대의 시작과 끝이 각각 무엇인지 */}
                 <div className={'level_bar_foot'}>
-                    <span>{toUsd(report.buyLevel)} 매수선</span>
-                    <span>{toUsd(report.sellLevel)} 매도선</span>
+                    <span>{toMoney(report.buyLevel, report.currency)} 매수선</span>
+                    <span>{toMoney(report.sellLevel, report.currency)} 매도선</span>
                 </div>
             </div>
 
             {/* 4) 근거 — 카드 바닥에 깔되 톤을 낮춰 본문과 섞이지 않게 한다 */}
             <footer className={'verdict_card_foot'}>
                 <p className={'verdict_basis_text'}>
-                    매수선은 <b>200일선 그 자체</b>, 과열선은 상장 이후 이격도 상위 10%에 해당하는
-                    200일선 +{(report.sellDisparity * 100).toFixed(1)}% 입니다. 지금은 200일선보다
+                    매수선은 <b>{BASELINE_LABEL} 그 자체</b>, 과열선은 상장 이후 이격도 {SELL_ZONE_LABEL}에 해당하는
+                    {BASELINE_LABEL} +{(report.sellDisparity * 100).toFixed(1)}% 입니다. 지금은 {BASELINE_LABEL}보다
                     {' '}<b>{(report.disparity * 100).toFixed(1)}%</b> 위, 최근 1년 종가 범위의
                     {' '}<b>{(report.yearRatio * 100).toFixed(0)}% 지점</b>입니다.
                 </p>
                 {/* 기다리는 전략이라 "이 문이 얼마나 드물게 열리는지"와 대기 비용을 반드시 같이 알려 준다 */}
                 <p className={'verdict_basis_text'}>
-                    최근 1년 중 매수 구간이 열린 날은 <b>{report.buyDaysLastYear}일</b>뿐이었습니다.
+                    최근 1년 중 매수 구간이 열린 주는 <b>{report.buyWeeksLastYear}주</b>뿐이었습니다.
                     {' '}{ANALYSIS_SYMBOL_META[symbol].waitingNote}
                 </p>
             </footer>

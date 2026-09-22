@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-    DEFAULT_END_YEAR,
-    DEFAULT_START_YEAR,
-    buildYears,
-    clampYear,
-} from '../constants/gridConstants'
-import { createDefaultEvents, createNewEventDefault, nextEventId } from '../constants/simulationDefaults'
+import { CALC_ASSET_ORDER, type CalcAsset } from '../constants/assetConstants'
+import { buildYears, clampYear } from '../constants/gridConstants'
+import { PRICE_DRIFT_POLICY, createNewEventDefault, nextEventId } from '../constants/simulationDefaults'
 import { runWorkbookSimulation } from '../services/simulationEngine'
 import { fetchRemoteState } from '../services/stateApiService'
-import { loadState, normalizeWorkbooks, saveState, toStateSignature } from '../services/storageService'
-import type { PersistedMark } from '../services/storageService'
+import {
+    createEmptyAssetState,
+    loadState,
+    saveState,
+    toAssetStateMap,
+    toStateSignature,
+} from '../services/storageService'
+import type { AssetStateMap, PersistedMark } from '../services/storageService'
 import type {
     InvestEvent,
     SimulationConstants,
@@ -40,14 +42,22 @@ function createTab(name: string, events: InvestEvent[]): SheetTab {
  * @param firstTabName 첫 시트 이름
  * @param startYear 대상 기간 시작 연도 — 직전에 보던 파일의 기간을 그대로 물려받는다
  * @param endYear 대상 기간 종료 연도
+ * @param sharePriceDriftPercent 연 주가 변동률 — 기간과 마찬가지로 보던 파일의 가정을 물려받는다
  */
-function createWorkbook(name: string, firstTabName: string, startYear: number, endYear: number): Workbook {
+function createWorkbook(
+    name: string,
+    firstTabName: string,
+    startYear: number,
+    endYear: number,
+    sharePriceDriftPercent: number,
+): Workbook {
     workbookSequence += 1
     return {
         id: `wb_${workbookSequence}`,
         name,
         startYear,
         endYear,
+        sharePriceDriftPercent,
         tabs: [createTab(firstTabName, [])],
     }
 }
@@ -88,42 +98,54 @@ function toIdNumber(id: string): number {
 /**
  * id 발급 카운터를 복원된 최대 번호로 밀어 올린다.
  * — 이걸 안 하면 새로 만드는 파일/탭 id가 복원된 id와 겹쳐 선택·삭제가 엉킨다.
- * @param workbooks 복원된 워크북 목록
+ * — 종목 칸이 여러 개라도 id 는 전 종목을 통틀어 유일해야 한다 (시트를 종목 간에 헷갈리지 않게).
+ * @param assets 복원된 종목별 워크북 상태
  */
-function syncSequences(workbooks: Workbook[]): void {
+function syncSequences(assets: AssetStateMap): void {
+    const workbooks = CALC_ASSET_ORDER.flatMap((asset) => assets[asset].workbooks)
     workbookSequence = Math.max(workbookSequence, ...workbooks.map((workbook) => toIdNumber(workbook.id)))
     tabSequence = Math.max(tabSequence, ...workbooks.flatMap((workbook) => workbook.tabs.map((tab) => toIdNumber(tab.id))))
+}
+
+/**
+ * 비어 있는 종목 칸 기본값 생성 — 파일 1개 / 빈 시트 1장
+ * — id 는 모듈 카운터로 새로 뽑아 다른 종목 칸과 겹치지 않게 한다.
+ * @param asset 대상 종목
+ */
+function createEmptyState(asset: CalcAsset) {
+    workbookSequence += 1
+    tabSequence += 1
+    return createEmptyAssetState(asset, `wb_${workbookSequence}`, `tab_${tabSequence}`)
+}
+
+/** 전 종목 빈 상태 — 저장 이력이 없을 때의 시작점 */
+function createEmptyAssets(): AssetStateMap {
+    const map = {} as AssetStateMap
+    CALC_ASSET_ORDER.forEach((asset) => {
+        map[asset] = createEmptyState(asset)
+    })
+    return map
 }
 
 /**
  * 최초 진입 시점의 상태 조립 — 로컬 저장본 기준
  * — 서버 스냅샷은 비동기라 첫 페인트를 막지 않도록 마운트 후 별도로 합류시킨다.
  */
-function createInitialState(): { workbooks: Workbook[], activeTabId: string, persisted: PersistedMark } {
+function createInitialState(): { assets: AssetStateMap, persisted: PersistedMark } {
 
     // 1) 로컬 저장 스냅샷 확인 — 형식이 깨졌거나 이력이 없으면 null
-    const restored = loadState()
+    //    v2 이하 저장본(JEPQ 하나만 다루던 시절)은 로드 과정에서 JEPQ 칸으로 옮겨진다
+    const restored = loadState(createEmptyState)
     if (restored !== null) {
-        syncSequences(restored.workbooks)
+        syncSequences(restored.assets)
         return {
-            workbooks: restored.workbooks,
-            activeTabId: restored.activeTabId,
-            persisted: {
-                signature: toStateSignature(restored.workbooks, restored.activeTabId),
-                at: restored.savedAt,
-            },
+            assets: restored.assets,
+            persisted: { signature: toStateSignature(restored.assets), at: restored.savedAt },
         }
     }
 
-    // 2) 기본 상태 — 파일 1개 / 시트 1장, 첫 탭에만 기본 계획을 채워 둔다
-    const workbooks: Workbook[] = [{
-        id: 'wb_0',
-        name: '파일1',
-        startYear: DEFAULT_START_YEAR,
-        endYear: DEFAULT_END_YEAR,
-        tabs: [createTab('시트1', createDefaultEvents())],
-    }]
-    return { workbooks, activeTabId: workbooks[0].tabs[0].id, persisted: { signature: null, at: null } }
+    // 2) 기본 상태 — 종목마다 파일 1개 / 빈 시트 1장
+    return { assets: createEmptyAssets(), persisted: { signature: null, at: null } }
 }
 
 /** 모듈 로드 시점에 1회만 조립되는 초기 상태 */
@@ -135,13 +157,15 @@ const INITIAL_STATE = createInitialState()
  * 워크북 목록 상태 훅
  * — 워크북(그룹) = 엑셀 파일 1개, 그 안의 탭 = 워크시트 1장.
  * — 선택된 탭 1개의 이벤트로 화면 그리드용 시뮬레이션 결과를 파생시킨다.
+ * — 계산기가 종목 탭 2개를 오가므로 상태는 종목별 칸으로 나눠 들고, 아래 로직은 "지금 보는 종목 칸"만 만진다.
+ *   그래서 TIGER 에서 만든 파일과 JEPQ 에서 만든 파일이 서로 섞이지 않고, 저장은 두 칸을 한 벌로 올린다.
  * @param constants 전 탭 공통 고정 상수 (상단 실시간 시세 + 고정 세금 정책)
+ * @param asset 지금 보고 있는 종목 탭
  */
-export function useWorkbooks(constants: SimulationConstants) {
+export function useWorkbooks(constants: SimulationConstants, asset: CalcAsset) {
 
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
-    const [workbooks, setWorkbooks] = useState<Workbook[]>(INITIAL_STATE.workbooks)               // 워크북(=파일) 목록, 순서 유지
-    const [activeTabId, setActiveTabId] = useState<string>(INITIAL_STATE.activeTabId)             // 현재 선택된 탭 (전체 그룹 통틀어 1개)
+    const [assets, setAssets] = useState<AssetStateMap>(INITIAL_STATE.assets)                     // 종목별 워크북 상태 한 벌
     const [editingTabId, setEditingTabId] = useState<string | null>(null)                         // 이름 편집 중인 탭
     const [editingWorkbookId, setEditingWorkbookId] = useState<string | null>(null)               // 이름 편집 중인 워크북
     const [hydrating, setHydrating] = useState<boolean>(true)                                     // 서버 스냅샷 합류 대기 중 여부
@@ -150,6 +174,25 @@ export function useWorkbooks(constants: SimulationConstants) {
     // ┣━━━━━━━━━━━━━━━━ Refs ━━━━━━━━━━━━━━━━━━━━━━━┫
     // 마운트 직후 서버 응답이 도착하기 전에 사용자가 손을 댔는지 — 댔다면 서버 값으로 덮지 않는다
     const editedRef = useRef<boolean>(false)
+
+    // ┣━━━━━━━━━━━━━━━━ Slice ━━━━━━━━━━━━━━━━━━━━━━┫
+    // 지금 보고 있는 종목 칸만 꺼내 쓴다. 아래 핸들러들은 전부 이 두 접근자를 통해서만 상태를 바꾸므로,
+    // 종목이 늘어도 핸들러 본문은 손댈 것이 없다.
+    const workbooks: Workbook[] = assets[asset].workbooks
+    const activeTabId: string = assets[asset].activeTabId
+
+    /** 선택 종목의 워크북 목록 교체 — @param updater 새 목록(또는 이전 목록을 받아 새 목록을 돌려주는 함수) */
+    const setWorkbooks = (updater: Workbook[] | ((prev: Workbook[]) => Workbook[])) => {
+        setAssets((prev) => {
+            const nextWorkbooks = typeof updater === 'function' ? updater(prev[asset].workbooks) : updater
+            return { ...prev, [asset]: { ...prev[asset], workbooks: nextWorkbooks } }
+        })
+    }
+
+    /** 선택 종목의 선택 탭 교체 — @param tabId 선택할 탭 id */
+    const setActiveTabId = (tabId: string) => {
+        setAssets((prev) => ({ ...prev, [asset]: { ...prev[asset], activeTabId: tabId } }))
+    }
 
     // ┣━━━━━━━━━━━━━━━━ Effects ━━━━━━━━━━━━━━━━━━━━┫
 
@@ -170,19 +213,19 @@ export function useWorkbooks(constants: SimulationConstants) {
                 const localSavedAt = INITIAL_STATE.persisted.at
                 if (localSavedAt !== null && remote.savedAt <= localSavedAt) return
 
-                // 1-4) 서버 스냅샷도 구버전일 수 있으므로 로컬과 동일하게 보정한 뒤 반영한다
-                const remoteWorkbooks = normalizeWorkbooks(remote.workbooks)
-                syncSequences(remoteWorkbooks)
-                setWorkbooks(remoteWorkbooks)
-                setActiveTabId(remote.activeTabId)
+                // 1-4) 서버 스냅샷도 구버전일 수 있으므로 저장 버전을 넘겨 로컬과 동일하게 보정·마이그레이션한다.
+                //      v2 이하 서버본은 여기서 JEPQ 칸으로 옮겨지고, 나머지 종목 칸은 빈 파일로 세워진다.
+                const remoteAssets = toAssetStateMap(
+                    { version: remote.version, savedAt: remote.savedAt, assets: remote.assets, workbooks: remote.workbooks ?? [], activeTabId: remote.activeTabId ?? '' },
+                    createEmptyState,
+                )
+                syncSequences(remoteAssets)
+                setAssets(remoteAssets)
 
                 // 1-5) 로컬 캐시도 서버본으로 맞춰 두고, 저장 기준점을 서버 시각으로 옮긴다.
                 //      이걸 안 하면 합류 직후 화면이 "변경됨"으로 잘못 표시된다.
-                saveState(remoteWorkbooks, remote.activeTabId, remote.savedAt)
-                setPersisted({
-                    signature: toStateSignature(remoteWorkbooks, remote.activeTabId),
-                    at: remote.savedAt,
-                })
+                saveState(remoteAssets, remote.savedAt)
+                setPersisted({ signature: toStateSignature(remoteAssets), at: remote.savedAt })
             } catch {
                 // 서버 미기동 / 네트워크 실패 — 로컬 복원본으로 계속 진행한다
             } finally {
@@ -206,9 +249,10 @@ export function useWorkbooks(constants: SimulationConstants) {
 
     // 3) 워크북 전체(모든 시트) × 대상 기간 전체 재계산
     //    기간이 늘어도 개월수 × 시트수 규모라 연산 비용이 낮고, React Compiler가 자동 메모이제이션하므로 useMemo를 쓰지 않는다.
+    //    주가 변동률은 파일마다 다른 가정이라 공통 시세 상수 위에 덮어써서 넘긴다
     const workbookResult: WorkbookSimulationResult = runWorkbookSimulation(
         activeWorkbook.tabs,
-        constants,
+        { ...constants, sharePriceDriftPercent: activeWorkbook.sharePriceDriftPercent },
         activeWorkbook.startYear,
         activeWorkbook.endYear,
     )
@@ -259,6 +303,7 @@ export function useWorkbooks(constants: SimulationConstants) {
             '시트1',
             activeWorkbook.startYear,
             activeWorkbook.endYear,
+            activeWorkbook.sharePriceDriftPercent,
         )
         setWorkbooks([...workbooks, newWorkbook])
         setActiveTabId(newWorkbook.tabs[0].id)
@@ -508,6 +553,15 @@ export function useWorkbooks(constants: SimulationConstants) {
         }))
     }
 
+    /** 연 주가 변동률 변경 — @param percent 입력된 % (허용 범위 밖은 잘라 넣는다) */
+    const handleDriftChange = (percent: number) => {
+        const clamped = Math.min(
+            PRICE_DRIFT_POLICY.MAX_PERCENT,
+            Math.max(PRICE_DRIFT_POLICY.MIN_PERCENT, Number.isFinite(percent) ? percent : 0),
+        )
+        updateWorkbook(activeWorkbook.id, (workbook) => ({ ...workbook, sharePriceDriftPercent: clamped }))
+    }
+
     /** 대상 기간 종료 연도 변경 — @param year 선택된 연도. 시작보다 앞이면 시작도 같이 당긴다 */
     const handleEndYearChange = (year: number) => {
         const endYear = clampYear(year)
@@ -519,6 +573,8 @@ export function useWorkbooks(constants: SimulationConstants) {
     }
 
     return {
+        /** 종목별 상태 한 벌 — 저장 버튼이 두 종목을 통째로 올리는 데 쓴다 */
+        assets,
         workbooks,
         activeTab,
         activeTabId: activeTab.id,
@@ -533,8 +589,10 @@ export function useWorkbooks(constants: SimulationConstants) {
         years,
         startYear: activeWorkbook.startYear,
         endYear: activeWorkbook.endYear,
+        sharePriceDriftPercent: activeWorkbook.sharePriceDriftPercent,
         handleStartYearChange,
         handleEndYearChange,
+        handleDriftChange,
         hydrating,
         persisted,
         handleMarkPersisted,

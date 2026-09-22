@@ -19,10 +19,16 @@ const LEDGER_FILE = join(DATA_DIR, 'ledger.json')
 const TEMP_FILE = join(DATA_DIR, 'ledger.json.tmp')
 
 /** 가계부 구조 버전 — 프론트 ledgerStorageService 와 동일하게 유지한다 */
-export const LEDGER_VERSION = 4
+export const LEDGER_VERSION = 5
 
 /** 스냅샷을 이루는 배열 이름 — 검증과 기본값 생성에 함께 쓴다 */
 const LEDGER_ARRAYS = ['entries', 'cards', 'fixedCosts', 'fixedIncomes', 'statements']
+
+/**
+ * 뒤늦게 붙은 배열 이름 — 있으면 검사하고, 없으면 빈 배열로 채운다
+ * 필수로 걸면 v4 로 저장된 기존 파일이 통째로 '깨진 파일' 취급을 받아 조회에서 null 로 떨어진다.
+ */
+const LEDGER_OPTIONAL_ARRAYS = ['errands']
 
 // ══════════ 검증 ══════════
 
@@ -43,11 +49,16 @@ export function validateLedger(body) {
         if (!Array.isArray(body[name])) return `${name}는 배열이어야 합니다`
     }
 
+    // 2-1) 나중에 붙은 배열 — 아예 없는 것은 옛 버전 파일이므로 통과시키고, 값이 있는데 배열이 아닌 것만 막는다
+    for (const name of LEDGER_OPTIONAL_ARRAYS) {
+        if (body[name] !== undefined && !Array.isArray(body[name])) return `${name}는 배열이어야 합니다`
+    }
+
     // 3) 각 항목은 최소한 id 를 가진 객체여야 한다 (통계 계산이 id 기준으로 돈다)
-    for (const name of LEDGER_ARRAYS) {
+    for (const name of [...LEDGER_ARRAYS, ...LEDGER_OPTIONAL_ARRAYS]) {
         // 카드 명세서(statements)만 id 없이 카드id+월로 식별한다
         if (name === 'statements') continue
-        for (const item of body[name]) {
+        for (const item of body[name] ?? []) {
             if (typeof item?.id !== 'string' || item.id.length === 0) {
                 return `${name}에 id 없는 항목이 있습니다`
             }
@@ -66,7 +77,7 @@ async function ensureDataDir() {
 
 /**
  * 가계부 저장 — 원자적 교체(임시 파일 쓰기 → rename)
- * @param body 프론트가 보낸 스냅샷 (entries · cards · fixedCosts · fixedIncomes · statements)
+ * @param body 프론트가 보낸 스냅샷 (entries · cards · fixedCosts · fixedIncomes · statements · errands)
  * @returns 저장된 스냅샷
  */
 export async function saveLedger(body) {
@@ -80,6 +91,8 @@ export async function saveLedger(body) {
         fixedCosts: body.fixedCosts,
         fixedIncomes: body.fixedIncomes,
         statements: body.statements,
+        // 옛 버전 프론트가 보낸 본문에는 없을 수 있어 빈 배열로 채운다
+        errands: body.errands ?? [],
     }
 
     // 2) 임시 파일에 먼저 쓰고 rename 으로 교체 — 쓰기 중단 시에도 기존 파일이 살아남는다

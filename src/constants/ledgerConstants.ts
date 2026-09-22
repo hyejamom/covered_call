@@ -7,7 +7,7 @@ export const LEDGER_CATEGORIES: Record<LedgerKind, string[]> = {
     [LedgerKind.INCOME]: ['급여', '상여', '배당', '금융수익', '부수입', '기타수입'],
     [LedgerKind.EXPENSE]: [
         '식비', '주거/관리', '교통', '통신', '의료', '보험',
-        '교육', '문화/여가', '여행', '쇼핑', '경조사', '저축/투자', '기타지출',
+        '교육', '문화/여가', '여행', '쇼핑', '경조사', '저축/투자', '혜자', '기타지출',
     ],
 }
 
@@ -17,6 +17,12 @@ export const LEDGER_CATEGORIES: Record<LedgerKind, string[]> = {
  * 자잘한 결제를 한 건씩 적지 않아도 분류별 지출이 그 달 카드값 전체를 덮게 한다.
  */
 export const LIVING_CATEGORY = '생활비'
+
+/**
+ * 대납 표기명 — 카드 정산에서 "내 돈이 아닌 결제"를 부르는 이름
+ * 엄마 심부름으로 산 물건처럼, 카드값에는 들어 있지만 엄마 용돈에서 그만큼 빠지는 금액이다.
+ */
+export const ERRAND_LABEL = '엄마'
 
 /** 구분 변경 시 기본으로 잡히는 분류 — 목록 첫 항목 */
 export function toDefaultCategory(kind: LedgerKind): string {

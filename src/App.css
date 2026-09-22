@@ -270,6 +270,110 @@
     white-space: nowrap;
 }
 
+/* ══════════ 계산기 종목 탭 (calc_asset_tab_bar) ══════════ */
+/*
+ * 계산기 안에서 종목을 가르는 두 번째 층. 최상위 탭 바(app_tab_bar)와 헷갈리지 않도록
+ * 고정하지 않고 본문 흐름에 두되, 알약이 아니라 카드 형태로 크게 잡아 "지금 어느 계좌를 보고 있는지"를 못 놓치게 한다.
+ */
+.calc_asset_tab_bar {
+    display: flex;
+    gap: 12px;
+    margin: 0 auto 22px;
+    max-width: 1400px;
+}
+
+.calc_asset_tab {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--bg-panel);
+    color: var(--text-mute);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.calc_asset_tab:hover {
+    border-color: var(--accent-border);
+    background: var(--bg-panel-soft);
+}
+
+/* 지금 보고 있는 종목 — 테두리 + 채움으로 한 장만 떠 보이게 한다 */
+.calc_asset_tab_selected,
+.calc_asset_tab_selected:hover {
+    border-color: var(--accent);
+    background: var(--accent-tint);
+    color: var(--text-strong);
+    box-shadow: inset 0 0 0 1px var(--accent-border);
+}
+
+/* 탭 번호 — 1번 TIGER 커버드콜(ISA) / 2번 JEPQ(일반) */
+.calc_asset_tab_order {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent-tint-strong);
+    color: var(--accent-ink);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.calc_asset_tab_selected .calc_asset_tab_order {
+    background: var(--accent);
+    color: #fff;
+}
+
+.calc_asset_tab_icon {
+    flex: none;
+    font-size: 20px;
+    line-height: 1;
+}
+
+/* 종목명 + 계좌 — 계좌가 곧 세금 규칙이라 두 줄로 쌓아 함께 읽히게 한다 */
+.calc_asset_tab_text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.calc_asset_tab_label {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-strong);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.calc_asset_tab_account {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-mute);
+}
+
+.calc_asset_tab_ticker {
+    flex: none;
+    padding: 3px 9px;
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    background: var(--bg-cell);
+    color: var(--text-mute);
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
 /* ══════════ 상단 정보 (top_info) ══════════ */
 .top_info {
     display: grid;
@@ -446,6 +550,17 @@
     color: var(--positive-ink);
 }
 
+/* 종목·계좌 배지 — 나머지 세제 배지가 왜 이렇게 생겼는지의 출발점이라 토프로 채워 앞세운다 */
+.sim_meta_item_asset {
+    border-color: var(--accent-border);
+    background: var(--accent-tint-strong);
+    cursor: help;
+}
+
+.sim_meta_item_asset .sim_meta_key {
+    color: var(--accent-ink);
+}
+
 /* 공용 입력 스타일 */
 .event_field {
     width: 100%;
@@ -496,6 +611,61 @@
     font-weight: 700;
 }
 
+/* 원금 헐기 시작 배지 — 아직 고갈은 아니지만 방향이 꺾이는 지점이라 황토(주의)로 세운다 */
+.year_sell_badge {
+    flex-basis: 100%;
+    padding: 1px 8px;
+    border: 1px solid var(--warning-border);
+    border-radius: 999px;
+    background: var(--warning-tint);
+    color: var(--warning-ink);
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-align: center;
+    cursor: help;
+}
+
+/* 계좌 고갈 배지 — 더 이상 꺼낼 돈이 없는 달. 표에서 가장 강한 경고라 테라코타를 채운다 */
+.year_depleted_badge {
+    flex-basis: 100%;
+    padding: 1px 8px;
+    border: 1px solid var(--danger);
+    border-radius: 999px;
+    background: var(--danger-tint-strong);
+    color: var(--danger-ink);
+    font-size: 11.5px;
+    font-weight: 800;
+    white-space: nowrap;
+    text-align: center;
+    cursor: help;
+}
+
+/* 고갈된 달의 셀 값 — 인출액을 못 채웠거나 잔액이 0인 칸 */
+.grid_cell_value_depleted {
+    color: var(--danger-ink);
+    font-weight: 800;
+}
+
+/* 인출 이벤트 안내 문구 */
+.event_hint_withdraw {
+    color: var(--danger-ink);
+}
+
+/* 실행 불가 경고 — ISA 납입한도처럼 "세금"이 아니라 "이 계획이 성립하는가"를 가르는 항목 */
+.sim_summary_warn {
+    padding: 0 10px;
+    border-radius: 999px;
+    background: var(--danger-tint);
+    color: var(--danger-ink);
+    font-weight: 700;
+    cursor: help;
+}
+
+.sim_summary_warn strong {
+    color: var(--danger-ink);
+}
+
 /* ── 이벤트 리스트 ── */
 .sim_events {
     display: flex;
@@ -505,9 +675,16 @@
 
 .event_row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 100px 34px;
+    /* 타입 · 투입 대상 · 시작 · 종료 · 금액 · 주가상승률 · 배당수익률 · 안내 · 삭제 */
+    grid-template-columns: 1fr 120px 1fr 1fr 1fr 88px 88px 148px 34px;
     align-items: center;
     gap: 10px;
+}
+
+/* 확정수익 통을 쓰지 않는 종목(JEPQ) — 투입 대상·수익률 3칸이 통째로 빠진 축약 행 */
+.event_row_simple {
+    /* 타입 · 시작 · 종료 · 금액 · 안내 · 삭제 */
+    grid-template-columns: 1fr 1fr 1fr 1fr 148px 34px;
 }
 
 .event_row_head {
@@ -524,6 +701,19 @@
     align-items: center;
     gap: 8px;
     min-width: 0;
+}
+
+/* 연 확정수익률 입력 — 숫자칸 뒤에 % 를 붙여 단위를 고정 표기한다 */
+.event_field_rate {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.event_rate_unit {
+    font-size: 13px;
+    color: var(--text-mute);
 }
 
 .event_hint {
@@ -543,6 +733,21 @@
     /*position: absolute;*/
     /*right: -175px;*/
     /*width: 160px;*/
+}
+
+/* 확정수익 구간 안내 — "20만원/월 · 연 10% 확정 / 2030-12에 주력 종목 이관" 두 줄 */
+.event_hint_growth {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.35;
+    white-space: normal;
+    color: var(--positive-ink);
+}
+
+/* 확정수익 구간 안내 중 짚어야 할 대목 — 성장 미반영 개월 경고 */
+.event_hint_warn {
+    color: var(--warning-ink);
 }
 
 .event_check {
@@ -1179,8 +1384,10 @@
 
 /* 0.0 — 연도 셀 */
 .grid_cell_year {
+    /* 종합과세 연도는 배지가 한 줄 더 붙으므로 줄바꿈을 허용한다 */
+    flex-wrap: wrap;
     justify-content: flex-start;
-    gap: 10px;
+    gap: 4px 10px;
     padding-left: 20px;
     font-size: 21px;
     font-weight: 800;
@@ -1254,6 +1461,18 @@
 .grid_cell_value_real {
     color: var(--rose-ink);
     font-size: 12px;
+}
+
+/* 확정수익 적립금 — 주력 종목 매수와 별개로 굴러가는 돈이라 세이지 톤으로 따로 읽히게 한다 */
+.grid_cell_value_growth {
+    color: var(--positive-ink);
+}
+
+/* 주력 종목으로 원금이 넘어간 달 — 굵게 + 밑줄로 전환 시점을 못 놓치게 한다 */
+.grid_cell_value_transfer {
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 /* 원천징수가 적용된 달의 배당금 — 황토 톤으로 구분 */
@@ -1348,17 +1567,75 @@
 
 /* 과세 연도 배지 */
 .year_tax_badge {
-    padding: 2px 8px;
+    /* 연도·나이 아래 줄로 떨어뜨린다 — "5월 종소세 12,345,678원" 은 라벨 칸 폭에 한 줄로 들어가지 않는다 */
+    flex-basis: 100%;
+    padding: 1px 8px;
     border: 1px solid var(--warning-border);
     border-radius: 999px;
     background: var(--warning-tint);
     color: var(--warning-ink);
-    font-size: 13px;
+    font-size: 11.5px;
     font-weight: 700;
-    letter-spacing: 0.02em;
+    letter-spacing: 0;
+    white-space: nowrap;
+    text-align: center;
     cursor: help;
-    position: absolute;
-    left: -50px
+}
+
+/* 종합과세 대상이지만 낼 돈이 0 인 해 — 사실은 같으므로 배지는 남기되 채움을 빼고 테두리만 남겨 톤을 낮춘다 */
+.year_tax_badge_zero {
+    background: transparent;
+    border-style: dashed;
+    font-weight: 600;
+    opacity: 0.75;
+}
+
+/* 건보료 배지 — 세금이 아니라 보험료라 종소세 배지와 색을 구분한다 */
+.year_health_badge {
+    flex-basis: 100%;
+    padding: 1px 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--sand, #f6e6cb);
+    color: var(--text-base);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0;
+    white-space: nowrap;
+    text-align: center;
+    cursor: help;
+}
+
+/* ISA 만기 정산 배지 — 해마다 내는 돈이 아니라 마지막 해에 한 번 붙는 값이라 세이지로 따로 읽히게 한다 */
+.year_isa_badge {
+    flex-basis: 100%;
+    padding: 1px 8px;
+    border: 1px solid var(--positive-border);
+    border-radius: 999px;
+    background: var(--positive-tint);
+    color: var(--positive-ink);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0;
+    white-space: nowrap;
+    text-align: center;
+    cursor: help;
+}
+
+/* ISA 납입한도 초과 배지 — 세금이 아니라 "이 계획을 실행할 수 없다"는 경고라 테라코타로 세운다 */
+.year_limit_badge {
+    flex-basis: 100%;
+    padding: 1px 8px;
+    border: 1px solid var(--danger-border);
+    border-radius: 999px;
+    background: var(--danger-tint-strong);
+    color: var(--danger-ink);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0;
+    white-space: nowrap;
+    text-align: center;
+    cursor: help;
 }
 
 /* 연도 옆 나이 표기 — 생년월을 넣었을 때만 노출 */
@@ -1414,6 +1691,26 @@
     color: var(--accent-ink);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+}
+
+/* 연 주가 변동률 입력 — 음수를 자주 넣는 칸이라 폭을 넉넉히 준다 */
+.drift_input {
+    width: 92px;
+    text-align: right;
+}
+
+/* 변동률을 넣었을 때의 결과 미리보기 — 기간 끝 주가 배수와 총수익률 */
+.drift_preview {
+    font-size: 13px;
+    color: var(--text-mute);
+    white-space: nowrap;
+}
+
+/* 기초지수 장기 수익률을 넘는 가정 — 틀린 입력은 아니므로 막지 않고 색으로만 짚어 준다 */
+.drift_preview_warn {
+    color: var(--danger-ink);
+    font-weight: 700;
+    white-space: normal;
 }
 
 .range_hint {
@@ -1479,7 +1776,12 @@
     }
 
     .event_row {
-        min-width: 940px;
+        min-width: 1320px;
+    }
+
+    /* 축약 행은 3칸이 빠진 만큼 최소 폭도 줄여 불필요한 가로 스크롤이 생기지 않게 한다 */
+    .event_row_simple {
+        min-width: 1000px;
     }
 
     /* 좁은 화면에서는 그리드 가로 스크롤 — 원 단위 숫자가 잘리지 않는 최소 폭 유지 */
@@ -1507,6 +1809,15 @@
     /* 카드 4장을 세로로 쌓는다 */
     .top_info {
         grid-template-columns: 1fr;
+    }
+
+    /* 종목 탭도 나란히 두면 종목명이 잘리므로 세로로 쌓고 티커는 접는다 */
+    .calc_asset_tab_bar {
+        flex-direction: column;
+    }
+
+    .calc_asset_tab_ticker {
+        display: none;
     }
 
     /* 좁은 화면에서는 상태 문구를 접고 버튼만 남긴다 */
@@ -2159,6 +2470,46 @@
     white-space: nowrap;
 }
 
+/* 결제 카드 이름 — 같은 칸의 분류보다 진하게 찍어 어느 카드에서 빠지는지 먼저 읽히게 한다 */
+.ledger_fixed_card {
+    font-weight: 700;
+    color: var(--text-strong);
+}
+
+/* 카드 미지정 — 강조하지 않고 나머지 메타와 같은 톤으로 눕힌다 */
+.ledger_fixed_card_none {
+    font-weight: 600;
+    color: var(--text-mute);
+}
+
+/* 종료 항목 펼치기 — 목록 아래에 조용히 붙는 텍스트 버튼 */
+.ledger_fixed_ended_toggle {
+    align-self: flex-start;
+    margin-top: 8px;
+    padding: 4px 0;
+    border: none;
+    background: none;
+    color: var(--text-mute);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ledger_fixed_ended_toggle:hover {
+    color: var(--accent-ink);
+    text-decoration: underline;
+}
+
+/* 카드 묶음의 첫 행 — 카드가 바뀌는 지점에만 진한 구분선을 준다 (목록 첫 행은 제외) */
+.ledger_fixed_row_card_start {
+    border-top: 1px solid var(--line);
+}
+
+.ledger_fixed_list > .ledger_fixed_row_card_start:first-child {
+    border-top: none;
+}
+
 .ledger_fixed_round {
     font-size: 13px;
     font-weight: 600;
@@ -2298,6 +2649,116 @@
 .ledger_card_note {
     font-size: 12px;
     color: var(--text-mute);
+}
+
+/* ── 대납(엄마 심부름) — 카드값에는 있지만 내 돈이 아닌 결제 ── */
+.ledger_errand_box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ledger_errand_toggle {
+    margin-left: 6px;
+    padding: 1px 6px;
+    border: 1px solid var(--line-soft);
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-mute);
+    font-size: 11px;
+    line-height: 1.5;
+    cursor: pointer;
+    transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+
+.ledger_errand_toggle:hover {
+    border-color: var(--accent-border);
+    background: var(--accent-tint);
+    color: var(--accent-ink);
+}
+
+/* 목록 + 입력 폼 — 카드 항목 안에서 한 단 들여쓴 블록으로 보이게 한다 */
+.ledger_errand_body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-left: 10px;
+    padding: 8px 10px;
+    border-left: 2px solid var(--line-soft);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    background: var(--accent-tint);
+}
+
+.ledger_errand_row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ledger_errand_memo {
+    flex: 1;
+    overflow: hidden;
+    font-size: 13px;
+    color: var(--text-base);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ledger_errand_amount {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-strong);
+    font-variant-numeric: tabular-nums;
+}
+
+.ledger_errand_remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-mute);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.14s ease, color 0.14s ease;
+}
+
+.ledger_errand_remove:hover {
+    background: var(--danger-tint);
+    color: var(--danger-ink);
+}
+
+.ledger_errand_form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.ledger_errand_field_memo {
+    flex: 1;
+    min-width: 0;
+}
+
+.ledger_errand_field_amount {
+    width: 92px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.ledger_errand_submit {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+/* 월 요약의 심부름 줄 — 제외된 금액이라 본문보다 흐리게 */
+.ledger_summary_sub_errand {
+    color: var(--accent-ink);
 }
 
 /* ── 본문 — 목록 + 분류별 지출 ── */

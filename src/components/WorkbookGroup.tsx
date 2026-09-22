@@ -1,4 +1,5 @@
 import { useState, type DragEvent } from 'react'
+import type { CalcAsset } from '../constants/assetConstants'
 import { DragMime } from '../constants/dragConstants'
 import type { SimulationConstants } from '../types/simulation'
 import type { SheetTabDragPayload, Workbook } from '../types/workbook'
@@ -20,6 +21,8 @@ interface WorkbookGroupProps {
     workbook: Workbook
     /** 전 탭 공통 고정 상수 — 그룹 단독 다운로드에 사용 */
     constants: SimulationConstants
+    /** 지금 보고 있는 종목 탭 — 단독 다운로드 파일명에 반영된다 */
+    asset: CalcAsset
     activeTabId: string
     editingTabId: string | null
     editingWorkbookId: string | null
@@ -150,6 +153,7 @@ function WorkbookGroup(props: WorkbookGroupProps) {
                     <ExcelDownloadButton
                         workbooks={[props.workbook]}
                         constants={props.constants}
+                        asset={props.asset}
                         compact
                     />
                     <button

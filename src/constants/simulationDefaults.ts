@@ -1,17 +1,76 @@
-import { EventType, type InvestEvent, type SimulationConstants } from '../types/simulation'
+import { AccountType, AssetCurrency, CALC_ASSET_META, type CalcAsset } from './assetConstants'
+import { EventType, type InvestEvent, InvestTarget, type SimulationConstants } from '../types/simulation'
 
 // ══════════ 시뮬레이션 기본값 ══════════
 // 시세 3종(주가·월배당·환율)은 상단 top_info 카드의 실시간 값을 그대로 쓰고,
 // 세금 정책은 바뀔 일이 거의 없어 아래 고정값으로 못 박는다.
 // 이벤트는 탭별로 독립 관리되며, 새 탭은 이벤트가 하나도 없는 빈 상태로 시작한다.
+// 종목마다 달라지는 값(시세 폴백·통화·계좌 유형·기본 주가 변동률)은 assetConstants 가 들고 있다.
 
-/** 세금 정책 — 고정 상수 (금융소득종합과세 기준 2,000만원 / 원천징수 15%) */
+/** 환율 조회 실패 시 쓸 폴백 (원/USD) — 2026-08-10 기준. 원화 종목에서는 쓰이지 않는다 */
+export const FALLBACK_EXCHANGE_RATE = 1420
+
+/**
+ * 세금 정책 — 고정 상수
+ * 미국 주식 배당은 두 단계로 세금을 맞는다.
+ * 1) 지급 시점: 미국이 15% 를 떼고 나머지만 입금한다 — 금액과 무관하게 "항상" 적용된다.
+ * 2) 이듬해 5월: 연간 세전 금융소득이 2,000만원을 넘은 해는 종합소득세 신고 대상이 되어
+ *    누진세율로 다시 계산하고, 이미 낸 미국 원천징수분을 외국납부세액공제로 빼 준 차액을 추가 납부한다.
+ */
 export const TAX_POLICY = {
-    /** 연간 배당 합산 과세 기준 (원) */
-    THRESHOLD_KRW: 20_000_000,
-    /** 원천징수 세율 (%) */
-    RATE_PERCENT: 15,
+    /** 미국 원천징수 세율 (%) — 배당 지급 시점에 무조건 차감 */
+    WITHHOLDING_RATE_PERCENT: 15,
+    /** 금융소득종합과세 기준 (원) — 연간 "세전" 배당 합계가 이 값을 넘으면 5월 종소세 신고 대상 */
+    COMPREHENSIVE_THRESHOLD_KRW: 20_000_000,
+    /** 분리과세 세율 (%) — 비교과세(분리과세방식) 산출세액과 기준금액 이하 구간에 쓰는 세율 */
+    SEPARATE_RATE_PERCENT: 14,
+    /** 지방소득세율 (%) — 소득세 결정세액에 얹는다 */
+    LOCAL_RATE_PERCENT: 10,
+    /**
+     * 배당 외 종합소득 (원) — 근로·사업소득 등.
+     * 은퇴 후 배당만 받는 상황을 기본으로 보아 0 으로 둔다. 다른 소득이 있으면 이 값만 올리면 된다.
+     */
+    OTHER_INCOME_KRW: 0,
+    /** 종합소득공제 (원) — 본인 기본공제 150만원만 반영한 최소 가정 */
+    BASIC_DEDUCTION_KRW: 1_500_000,
 } as const
+
+/**
+ * 건강보험료 정책 — 고정 상수 (2025년 기준 요율)
+ *
+ * 배당만 받는 사람은 결국 지역가입자로 떨어진다. 흐름은 두 단계다.
+ * 1) 연 금융소득이 1,000만원을 넘으면 그 순간 "전액"이 건보료 부과 대상 소득으로 잡힌다 (초과분만이 아니다).
+ * 2) 합산소득이 2,000만원을 넘으면 피부양자 자격을 잃고 지역가입자로 전환되어 실제로 고지서가 날아온다.
+ * 요율은 해마다 바뀌므로 값만 갈아 끼우면 전 구간이 다시 계산된다.
+ */
+export const HEALTH_INSURANCE_POLICY = {
+    /** 건강보험료율 (%) — 지역가입자 소득 정률 부과 (2025년 7.09%) */
+    RATE_PERCENT: 7.09,
+    /** 장기요양보험료율 (%) — 건강보험료 대비 (2025년 12.95%) */
+    LONG_TERM_CARE_RATE_PERCENT: 12.95,
+    /** 금융소득 부과 기준 (원) — 연간 금융소득이 이 값을 넘으면 초과분이 아니라 전액이 소득으로 잡힌다 */
+    INCOME_THRESHOLD_KRW: 10_000_000,
+    /** 피부양자 자격 상실 기준 (원) — 연 합산소득이 이 값을 넘으면 지역가입자로 전환된다 */
+    DEPENDENT_LIMIT_KRW: 20_000_000,
+    /** 지역가입자 월 건강보험료 상한 (원) — 2025년 기준. 장기요양보험료는 이 상한 위에 따로 붙는다 */
+    MONTHLY_CAP_KRW: 4_240_710,
+} as const
+
+/**
+ * 종합소득세 누진세율표 (2026년 기준)
+ * — limit: 과세표준 상한(원) / ratePercent: 세율(%) / deduction: 누진공제액(원)
+ *   산출세액 = 과세표준 × 세율 − 누진공제액
+ */
+export const INCOME_TAX_BRACKETS = [
+    { limit: 14_000_000, ratePercent: 6, deduction: 0 },
+    { limit: 50_000_000, ratePercent: 15, deduction: 1_260_000 },
+    { limit: 88_000_000, ratePercent: 24, deduction: 5_760_000 },
+    { limit: 150_000_000, ratePercent: 35, deduction: 15_440_000 },
+    { limit: 300_000_000, ratePercent: 38, deduction: 19_940_000 },
+    { limit: 500_000_000, ratePercent: 40, deduction: 25_940_000 },
+    { limit: 1_000_000_000, ratePercent: 42, deduction: 35_940_000 },
+    { limit: Number.POSITIVE_INFINITY, ratePercent: 45, deduction: 65_940_000 },
+] as const
 
 /**
  * 물가 정책 — 고정 상수
@@ -19,36 +78,107 @@ export const TAX_POLICY = {
  * BASE_YEAR 를 바꾸면 gridConstants 의 RowLabel.DIVIDEND_REAL 라벨 문구도 자동으로 따라간다.
  */
 export const INFLATION_POLICY = {
-    /** 연 물가상승률 (%) */
-    RATE_PERCENT: 2.5,
+    /** 연 물가상승률 (%) — 한국은행 물가안정목표 2% 보다 한 단계 보수적으로 잡은 값 */
+    RATE_PERCENT: 3,
     /** 실질가치 환산 기준연도 — 이 해 1월의 화폐가치를 1로 본다 */
     BASE_YEAR: 2026,
 } as const
 
-/** 시세 조회 실패 시 사용할 폴백 값 — 2026-08-10 기준 */
-export const FALLBACK_MARKET = {
-    sharePriceUsd: 59.74,
-    monthlyDividendUsd: 0.70497,
-    exchangeRate: 1420,
+/**
+ * 성장자산 정책 — 기본값
+ * '월 정기매수(성장자산)' 이벤트를 새로 만들 때 채워 넣는 연 수익률이며, 행마다 자유롭게 바꿀 수 있다.
+ *
+ * 기준 근거 — QQQ 의 지난 27년 실적은 약 13배(+1300%)이고, 이는 연 복리로 환산하면 약 10% 다.
+ * 1) 과거 최고 구간의 실적을 그대로 미래 가정으로 쓰면 낙관 편향이 생기고,
+ * 2) 이 엔진은 "그 해 넣은 돈도 그 해 수익을 온전히 받는" 방식이라 실제 적립식보다 반년치 수익이 더 붙는다.
+ * 3) 그래서 27년 기준 약 10배(+1000%) 수준으로 한 단계 깎은 연 9% 를 보수적 기본값으로 쓴다.
+ *    (연 9% × 27년 ≒ 10.2배 · 연 10% × 27년 ≒ 13.1배)
+ *
+ * 총수익 분해 — 위 9% 는 "주가상승 + 배당"을 합친 세전 총수익이다.
+ * QQQ 실적 배당률이 연 0.6% 안팎이므로 주가상승 8.4% + 배당 0.6% 로 나눠 담아 총합 9% 를 유지한다.
+ * 배당은 미국 원천징수 15% 를 떼고 재투자되므로 실제로 굴러가는 총수익은 8.4 + 0.6×0.85 = 연 8.91% 가 된다.
+ */
+export const GROWTH_POLICY = {
+    /** 기본 연 주가상승률 (%) — 배당을 뺀 가격 상승분만 (총수익 9% − 배당 0.6%) */
+    DEFAULT_PRICE_GROWTH_PERCENT: 8.4,
+    /** 기본 연 배당수익률 (%, 세전) — QQQ 실적 배당률 수준 */
+    DEFAULT_DIVIDEND_YIELD_PERCENT: 0.6,
+} as const
+
+/**
+ * ISA(개인종합자산관리계좌) 정책 — 고정 상수
+ *
+ * 이 계좌의 배당은 지급 시점에 그대로 받는 현금으로 본다. 국내 상장 ETF 라 미국 원천징수 15% 가 없고,
+ * 계좌 안이라 배당에 붙는 세금도 없다. 금융소득종합과세에도 건강보험료 부과 소득에도 잡히지 않는다.
+ * 그래서 세율 상수가 하나도 없고, ISA 에만 남는 제약인 납입한도만 상수로 둔다.
+ */
+export const ISA_POLICY = {
+    /** 연간 납입한도 (원) */
+    ANNUAL_LIMIT_KRW: 20_000_000,
+    /** 총 납입한도 (원) */
+    TOTAL_LIMIT_KRW: 100_000_000,
+} as const
+
+/**
+ * 주가 변동률 입력 정책 — 파일(워크북) 단위 설정
+ *
+ * 커버드콜 ETF(JEPQ)의 분배금은 기초자산 상승분을 옵션으로 팔아 만든 돈이라, 그만큼 주가 상승 여력이 깎인다.
+ * 주가를 고정(0%)으로 두면 "배당은 다 받고 원금도 그대로"인 과하게 유리한 가정이 되므로
+ * 시나리오마다 이 값을 음수로 내려 NAV 침식을 반영해 볼 수 있게 열어 둔다.
+ * 반대로 나스닥100 같은 성장형 지수는 0 으로 두면 과하게 불리해지므로 종목 기본값이 양수로 들어온다.
+ * (종목별 기본값은 assetConstants 의 defaultDriftPercent 를 따른다)
+ */
+export const PRICE_DRIFT_POLICY = {
+    /** 입력 가능한 연 주가 변동률 범위 (%) */
+    MIN_PERCENT: -20,
+    MAX_PERCENT: 20,
 } as const
 
 /**
  * 실시간 시세 + 고정 세금 정책 → 시뮬레이션 상수 조립
- * — 아직 도착하지 않았거나 조회 실패한 항목은 폴백 값으로 대체한다.
+ * — 아직 도착하지 않았거나 조회 실패한 항목은 종목별 폴백 값으로 대체한다.
+ * — 계좌 유형에 따라 배당 원천징수율이 갈린다. ISA 계좌(국내 ETF)는 배당에 붙는 세금이 아예 없다.
+ * @param asset 지금 보고 있는 종목 탭
+ * @param sharePrice 조회된 1주 가격 (종목 통화 단위) — 없으면 폴백
+ * @param monthlyDividend 조회된 주당 월 배당금 (종목 통화 단위) — 없으면 폴백
+ * @param exchangeRate 조회된 원/달러 환율 — 원화 종목에서는 무시되고 1 이 들어간다
  */
 export function resolveConstants(
-    sharePriceUsd: number | null,
-    monthlyDividendUsd: number | null,
+    asset: CalcAsset,
+    sharePrice: number | null,
+    monthlyDividend: number | null,
     exchangeRate: number | null,
 ): SimulationConstants {
+    const meta = CALC_ASSET_META[asset]
+    const isIsa = meta.accountType === AccountType.ISA
+
     return {
-        sharePriceUsd: sharePriceUsd ?? FALLBACK_MARKET.sharePriceUsd,
-        monthlyDividendUsd: monthlyDividendUsd ?? FALLBACK_MARKET.monthlyDividendUsd,
-        exchangeRate: exchangeRate ?? FALLBACK_MARKET.exchangeRate,
-        taxThresholdKrw: TAX_POLICY.THRESHOLD_KRW,
-        taxRatePercent: TAX_POLICY.RATE_PERCENT,
+        currency: meta.currency,
+        accountType: meta.accountType,
+        sharePriceNative: sharePrice ?? meta.fallback.sharePrice,
+        monthlyDividendNative: monthlyDividend ?? meta.fallback.monthlyDividend,
+        // 원화 종목은 이미 원 단위 시세라 환산할 것이 없다 — 환율 1 로 두면 아래 계산식이 그대로 성립한다
+        exchangeRate: meta.currency === AssetCurrency.KRW
+            ? 1
+            : exchangeRate ?? FALLBACK_EXCHANGE_RATE,
+        // 주가 변동률은 파일(워크북)마다 잡는 값이라 여기서는 종목 기본값을 두고 호출측에서 덮어쓴다
+        sharePriceDriftPercent: meta.defaultDriftPercent,
+        // ISA 계좌 안의 배당은 뗄 세금이 없어 지급액 전액이 그대로 들어온다
+        withholdingRatePercent: isIsa ? 0 : TAX_POLICY.WITHHOLDING_RATE_PERCENT,
+        comprehensiveThresholdKrw: TAX_POLICY.COMPREHENSIVE_THRESHOLD_KRW,
+        separateRatePercent: TAX_POLICY.SEPARATE_RATE_PERCENT,
+        localRatePercent: TAX_POLICY.LOCAL_RATE_PERCENT,
+        otherIncomeKrw: TAX_POLICY.OTHER_INCOME_KRW,
+        basicDeductionKrw: TAX_POLICY.BASIC_DEDUCTION_KRW,
+        healthRatePercent: HEALTH_INSURANCE_POLICY.RATE_PERCENT,
+        longTermCareRatePercent: HEALTH_INSURANCE_POLICY.LONG_TERM_CARE_RATE_PERCENT,
+        healthIncomeThresholdKrw: HEALTH_INSURANCE_POLICY.INCOME_THRESHOLD_KRW,
+        dependentLimitKrw: HEALTH_INSURANCE_POLICY.DEPENDENT_LIMIT_KRW,
+        healthMonthlyCapKrw: HEALTH_INSURANCE_POLICY.MONTHLY_CAP_KRW,
         inflationRatePercent: INFLATION_POLICY.RATE_PERCENT,
         inflationBaseYear: INFLATION_POLICY.BASE_YEAR,
+        isaAnnualLimitKrw: ISA_POLICY.ANNUAL_LIMIT_KRW,
+        isaTotalLimitKrw: ISA_POLICY.TOTAL_LIMIT_KRW,
     }
 }
 
@@ -76,9 +206,14 @@ export function createNewEventDefault(startYear: number, endYear: number): Omit<
         startYm,
         endYm: '',
         amount: 0,
+        // 투입 대상 기본값 — 주력 종목 매수. 확정수익 자산으로 굴리려면 행에서 대상을 바꾼다
+        target: InvestTarget.MAIN,
         includesRecurring: false,
         // 재투자 구간으로 바꿨을 때의 기본값 — 기본 동작(재투자 함)과 일치시킨다
         reinvest: true,
+        // 성장자산으로 바꿨을 때의 기본 연 주가상승률 / 배당수익률
+        priceGrowthPercent: GROWTH_POLICY.DEFAULT_PRICE_GROWTH_PERCENT,
+        dividendYieldPercent: GROWTH_POLICY.DEFAULT_DIVIDEND_YIELD_PERCENT,
     }
 }
 

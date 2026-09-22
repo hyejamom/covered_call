@@ -1,6 +1,7 @@
 import {
     FixedCostType,
     LedgerKind,
+    type CardErrand,
     type CardStatement,
     type FixedCost,
     type FixedIncome,
@@ -22,8 +23,9 @@ const STORAGE_KEY = 'call_ledger_state_v1'
 /**
  * 현재 스냅샷 구조 버전
  * — 1: 입출금만 / 2: 카드·고정비·명세서 추가 / 3: 고정 수입 추가 / 4: 고정비 종료월(endYm) 추가
+ *   5: 대납(엄마 심부름) 추가
  */
-const STORAGE_VERSION = 4
+const STORAGE_VERSION = 5
 
 /** localStorage에 직렬화되는 스냅샷 형태 */
 export interface SavedLedgerDto {
@@ -35,6 +37,7 @@ export interface SavedLedgerDto {
     fixedCosts: FixedCost[]
     fixedIncomes: FixedIncome[]
     statements: CardStatement[]
+    errands: CardErrand[]
 }
 
 /** 훅이 주고받는 가계부 전체 상태 — 저장 메타(version/savedAt)를 뺀 알맹이 */
@@ -44,6 +47,7 @@ export interface LedgerSnapshot {
     fixedCosts: FixedCost[]
     fixedIncomes: FixedIncome[]
     statements: CardStatement[]
+    errands: CardErrand[]
 }
 
 /** 빈 가계부 */
@@ -53,6 +57,7 @@ const EMPTY_SNAPSHOT: LedgerSnapshot = {
     fixedCosts: [],
     fixedIncomes: [],
     statements: [],
+    errands: [],
 }
 
 // ┣━━━━━━━━━━━━━━━━ Validators ━━━━━━━━━━━━━━━━━┫
@@ -126,6 +131,19 @@ function isRestorableStatement(value: unknown): value is CardStatement {
         && Number.isFinite(candidate.total)
 }
 
+/** 대납 1건이 복원 가능한 형태인지 */
+function isRestorableErrand(value: unknown): value is CardErrand {
+    if (typeof value !== 'object' || value === null) return false
+    const candidate = value as Partial<CardErrand>
+
+    return typeof candidate.id === 'string'
+        && typeof candidate.cardId === 'string'
+        && typeof candidate.ym === 'string'
+        && typeof candidate.memo === 'string'
+        && typeof candidate.amount === 'number'
+        && Number.isFinite(candidate.amount)
+}
+
 // ┣━━━━━━━━━━━━━━━━ API ━━━━━━━━━━━━━━━━━━━━━━━━┫
 
 /**
@@ -180,5 +198,6 @@ export function toRestoredSnapshot(candidate: Partial<LedgerSnapshot>): LedgerSn
         fixedCosts: (candidate.fixedCosts ?? []).filter(isRestorableFixedCost).map(toRestoredFixedCost),
         fixedIncomes: (candidate.fixedIncomes ?? []).filter(isRestorableFixedIncome),
         statements: (candidate.statements ?? []).filter(isRestorableStatement),
+        errands: (candidate.errands ?? []).filter(isRestorableErrand),
     }
 }

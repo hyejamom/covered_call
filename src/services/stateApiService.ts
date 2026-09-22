@@ -1,14 +1,23 @@
+import type { AssetStateMap } from './storageService'
 import type { Workbook } from '../types/workbook'
 
 // ══════════ 통신용 DTO ══════════
 
-/** GET /api/state 응답 — 서버에 보관된 스냅샷 전문 */
+/**
+ * GET /api/state 응답 — 서버에 보관된 스냅샷 전문
+ * — v3 부터는 종목별 슬라이스(assets)로 오지만, 서버 파일이 아직 v2 이하일 수 있어
+ *   구형태(workbooks/activeTabId)도 함께 받아 둔다. 형태 판별과 승격은 storageService 가 맡는다.
+ */
 export interface RemoteStateDto {
     version: number
     /** 서버 기준 저장 시각 (ISO) */
     savedAt: string
-    workbooks: Workbook[]
-    activeTabId: string
+    /** v3 — 종목별 워크북 상태 */
+    assets?: AssetStateMap
+    /** v2 이하 — 종목 구분 없이 워크북 목록만 있던 시절의 형태 */
+    workbooks?: Workbook[]
+    /** v2 이하 — 저장 시점 선택 탭 id */
+    activeTabId?: string
 }
 
 /** POST /api/state 응답 — 저장 결과 메타만 돌려받는다 */
@@ -77,15 +86,14 @@ export async function fetchRemoteState(): Promise<RemoteStateDto | null> {
 
 /**
  * 현재 상태를 서버에 저장 (기존 스냅샷 덮어쓰기)
- * @param workbooks 워크북 전체 목록
- * @param activeTabId 저장 시점의 선택 탭 id
+ * @param assets 종목별 워크북 상태 — 계산기 탭 전체를 한 벌로 올린다
  * @returns 서버가 확정한 저장 시각
  */
-export async function saveRemoteState(workbooks: Workbook[], activeTabId: string): Promise<RemoteSaveResultDto> {
+export async function saveRemoteState(assets: AssetStateMap): Promise<RemoteSaveResultDto> {
     const response = await fetchWithTimeout(STATE_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workbooks, activeTabId }),
+        body: JSON.stringify({ assets }),
     })
 
     if (!response.ok) throw new Error(await toErrorMessage(response))

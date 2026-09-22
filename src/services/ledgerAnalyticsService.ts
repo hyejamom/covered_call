@@ -2,6 +2,7 @@ import { LIVING_CATEGORY, shiftYm, toYmOfDate } from '../constants/ledgerConstan
 import { toCardUsedOfMonth, toChargesOfMonth, toIncomesOfMonth, toLivingCost } from './ledgerEngine'
 import {
     LedgerKind,
+    type CardErrand,
     type CardStatement,
     type FixedCost,
     type FixedIncome,
@@ -44,6 +45,7 @@ function toYmRange(endYm: string, months: number): string[] {
  * @param fixedCosts 등록된 고정비/할부 전체
  * @param fixedIncomes 등록된 고정 수입 전체
  * @param statements 직접 입력한 카드 월 청구 총액 전체 (생활비 산출용)
+ * @param errands 직접 입력한 대납(엄마 심부름) 전체 — 카드 사용액에서 걷어낸다
  * @param endYm 기간의 마지막 달 'YYYY-MM'
  * @param months 기간 길이 (개월)
  */
@@ -52,6 +54,7 @@ export function toRangeSummary(
     fixedCosts: FixedCost[],
     fixedIncomes: FixedIncome[],
     statements: CardStatement[],
+    errands: CardErrand[],
     endYm: string,
     months: number,
 ): LedgerRangeSummary {
@@ -90,7 +93,8 @@ export function toRangeSummary(
             .reduce((sum, income) => sum + income.amount, 0)
 
         // 3-3) 생활비 — 카드로 쓴 돈 중 직접 입력한 큰 지출로 설명되지 않는 나머지
-        const cardUsed = toCardUsedOfMonth(charges, statements, ym)
+        //      카드 사용액에서 대납(엄마 심부름)은 이미 빠져 있다 — 엄마 용돈으로 이미 한 번 잡힌 돈이다
+        const cardUsed = toCardUsedOfMonth(charges, statements, errands, ym)
         const living = toLivingCost(cardUsed, directExpense)
 
         // 3-4) 분류별 누적 — 고정비 · 직접 입력분 · 뭉친 생활비를 한 통에 담는다

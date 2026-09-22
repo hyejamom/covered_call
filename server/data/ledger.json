@@ -1,6 +1,6 @@
 {
-  "version": 4,
-  "savedAt": "2026-08-13T06:52:45.498Z",
+  "version": 5,
+  "savedAt": "2026-09-21T02:07:14.679Z",
   "entries": [
     {
       "date": "2026-07-13",
@@ -113,6 +113,86 @@
       "memo": "택시",
       "amount": 5800,
       "id": "led_1786595557546_29"
+    },
+    {
+      "date": "2026-08-26",
+      "kind": "EXPENSE",
+      "category": "교육",
+      "memo": "말해보카1년권",
+      "amount": 99000,
+      "id": "led_1789004991563_1"
+    },
+    {
+      "date": "2026-08-09",
+      "kind": "EXPENSE",
+      "category": "식비",
+      "memo": "짠",
+      "amount": 42000,
+      "id": "led_1789005102563_1"
+    },
+    {
+      "date": "2026-07-31",
+      "kind": "EXPENSE",
+      "category": "식비",
+      "memo": "서가앤쿡(재은)",
+      "amount": 45800,
+      "id": "led_1789005128807_3"
+    },
+    {
+      "date": "2026-08-02",
+      "kind": "EXPENSE",
+      "category": "쇼핑",
+      "memo": "패디",
+      "amount": 35000,
+      "id": "led_1789005150088_5"
+    },
+    {
+      "date": "2026-08-02",
+      "kind": "EXPENSE",
+      "category": "교육",
+      "memo": "영어책2권",
+      "amount": 22320,
+      "id": "led_1789005167729_7"
+    },
+    {
+      "date": "2026-08-17",
+      "kind": "EXPENSE",
+      "category": "혜자",
+      "memo": "꾸앤쏭",
+      "amount": 65000,
+      "id": "led_1789005189661_9"
+    },
+    {
+      "date": "2026-08-12",
+      "kind": "EXPENSE",
+      "category": "혜자",
+      "memo": "마이단독",
+      "amount": 200000,
+      "id": "led_1789005198510_11"
+    },
+    {
+      "date": "2026-09-11",
+      "kind": "EXPENSE",
+      "category": "경조사",
+      "memo": "엄마 건조기",
+      "amount": 949000,
+      "id": "led_1789956025621_7"
+    },
+    {
+      "date": "2026-09-06",
+      "kind": "EXPENSE",
+      "category": "문화/여가",
+      "memo": "유니클로티셔츠",
+      "amount": 39700,
+      "id": "led_1789956078743_9"
+    },
+    {
+      "date": "2026-09-06",
+      "kind": "EXPENSE",
+      "category": "문화/여가",
+      "memo": "주누랑코디디공연",
+      "amount": 85000,
+      "id": "led_1789956164224_11"
     }
   ],
   "cards": [
@@ -143,10 +223,10 @@
       "cardId": "card_1786518281595_5",
       "category": "교통",
       "startYm": "2026-07",
+      "endYm": "",
       "months": 0,
-      "amount": 60000,
-      "id": "fix_1786523677284_9",
-      "endYm": ""
+      "amount": 85700,
+      "id": "fix_1786523677284_9"
     },
     {
       "type": "RECURRING",
@@ -275,10 +355,10 @@
       "cardId": "",
       "category": "경조사",
       "startYm": "2026-07",
+      "endYm": "",
       "months": 0,
       "amount": 400000,
-      "id": "fix_1786524896737_1",
-      "endYm": ""
+      "id": "fix_1786524896737_1"
     },
     {
       "type": "RECURRING",
@@ -295,12 +375,12 @@
       "type": "RECURRING",
       "name": "엄빠돈(저축)",
       "cardId": "",
-      "category": "저축/투자",
+      "category": "경조사",
       "startYm": "2026-07",
+      "endYm": "",
       "months": 0,
       "amount": 50000,
-      "id": "fix_1786525002003_5",
-      "endYm": ""
+      "id": "fix_1786525002003_5"
     },
     {
       "type": "RECURRING",
@@ -345,6 +425,39 @@
       "months": 0,
       "amount": 30000,
       "id": "fix_1786603964654_3"
+    },
+    {
+      "type": "INSTALLMENT",
+      "name": "메가스터디 남은금액",
+      "cardId": "card_1786518275692_3",
+      "category": "교육",
+      "startYm": "2026-08",
+      "endYm": "",
+      "months": 3,
+      "amount": 17400,
+      "id": "fix_1789014983121_1"
+    },
+    {
+      "type": "INSTALLMENT",
+      "name": "보라카이 비행기",
+      "cardId": "card_1786518275692_3",
+      "category": "여행",
+      "startYm": "2026-09",
+      "endYm": "",
+      "months": 3,
+      "amount": 524400,
+      "id": "fix_1789955978649_5"
+    },
+    {
+      "type": "RECURRING",
+      "name": "엄마이사비",
+      "cardId": "",
+      "category": "경조사",
+      "startYm": "2026-08",
+      "endYm": "",
+      "months": 0,
+      "amount": 100000,
+      "id": "fix_1789956416652_1"
     }
   ],
   "fixedIncomes": [
@@ -366,6 +479,84 @@
       "cardId": "card_1786518281595_5",
       "ym": "2026-07",
       "total": 447820
+    },
+    {
+      "cardId": "card_1786518275692_3",
+      "ym": "2026-08",
+      "total": 1820741
+    },
+    {
+      "cardId": "card_1786518281595_5",
+      "ym": "2026-08",
+      "total": 409460
+    },
+    {
+      "cardId": "card_1786518275692_3",
+      "ym": "2026-09",
+      "total": 1911230
+    },
+    {
+      "cardId": "card_1786518281595_5",
+      "ym": "2026-09",
+      "total": 400000
+    }
+  ],
+  "errands": [
+    {
+      "id": "err_1789955663771_1",
+      "cardId": "card_1786518275692_3",
+      "ym": "2026-08",
+      "memo": "종합비타민",
+      "amount": 82000
+    },
+    {
+      "id": "err_1789955672374_3",
+      "cardId": "card_1786518275692_3",
+      "ym": "2026-08",
+      "memo": "오메가3",
+      "amount": 38000
+    },
+    {
+      "id": "err_1789955680767_5",
+      "cardId": "card_1786518275692_3",
+      "ym": "2026-08",
+      "memo": "콜라겐",
+      "amount": 20000
+    },
+    {
+      "id": "err_1789955687217_7",
+      "cardId": "card_1786518275692_3",
+      "ym": "2026-08",
+      "memo": "엄마셔츠",
+      "amount": 30000
+    },
+    {
+      "id": "err_1789955695069_9",
+      "cardId": "card_1786518275692_3",
+      "ym": "2026-08",
+      "memo": "구강유산균",
+      "amount": 84000
+    },
+    {
+      "id": "err_1789955701639_11",
+      "cardId": "card_1786518275692_3",
+      "ym": "2026-08",
+      "memo": "아쿠아픽",
+      "amount": 94000
+    },
+    {
+      "id": "err_1789955720976_1",
+      "cardId": "card_1786518275692_3",
+      "ym": "2026-09",
+      "memo": "오메가3",
+      "amount": 20000
+    },
+    {
+      "id": "err_1789955785252_3",
+      "cardId": "card_1786518275692_3",
+      "ym": "2026-09",
+      "memo": "바디워시",
+      "amount": 10000
     }
   ]
 }

@@ -4,7 +4,7 @@
 
 /** 최상위 화면 */
 export const AppView = {
-    /** 1페이지 · 기본 진입 화면 — JEPQ 적립/배당 시뮬레이션 */
+    /** 1페이지 · 기본 진입 화면 — 종목 탭 2개(TIGER 나스닥100커버드콜·ISA / JEPQ·일반)로 나뉜 적립/배당 시뮬레이션 */
     COVERED_CALL: 'COVERED_CALL',
     /** 2페이지 — 가계부. 월별 수입/지출 기록 */
     LEDGER: 'LEDGER',
@@ -29,7 +29,7 @@ export const APP_VIEW_META: Record<AppView, AppViewMeta> = {
         order: 1,
         label: '계산기',
         icon: '📈',
-        description: 'JEPQ 적립·배당 시뮬레이션',
+        description: 'TIGER 나스닥100커버드콜(ISA) · JEPQ(일반) 적립 시뮬레이션',
     },
     [AppView.LEDGER]: {
         order: 2,

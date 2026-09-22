@@ -8,6 +8,7 @@ import {
     type FixedCostCharge,
     type LedgerCard,
 } from '../types/ledger'
+import { isFixedCostEnded } from '../services/ledgerEngine'
 import { formatKrw } from '../utils/format'
 
 /** 카드 미지정 값 — select 의 빈 문자열과 짝을 맞춘다 */
@@ -54,6 +55,7 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
     const [endYm, setEndYm] = useState<string>('')                             // 수정 중인 항목의 종료월 — 폼에 칸은 없고 저장 시 그대로 되돌려준다
     const [editingId, setEditingId] = useState<string | null>(null)            // 수정 중인 고정비 id. null이면 신규 등록 모드
     const [changingId, setChangingId] = useState<string | null>(null)          // 금액 변경 중인 고정비 id — 선택된 달부터 새 금액을 적용한다
+    const [showEnded, setShowEnded] = useState<boolean>(false)                 // 청구가 끝난 건을 펼쳐 볼지 — 기본은 접어 둔다
 
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     // 1) 입력값 파싱 — 할부는 개월 수까지 유효해야 등록할 수 있다
@@ -77,11 +79,30 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
         ? null
         : props.fixedCosts.find((cost) => cost.id === changingId) ?? null
 
-    // 4) 청구되는 건을 위로 올린 목록 — 끝난 할부/시작 전 항목은 아래로 내린다
-    const sortedCosts = [...props.fixedCosts].sort((a, b) => {
+    // 4) 청구가 끝난 건 — 해지한 고정비와 다 갚은 할부는 매달 쌓이기만 하므로 목록에서 내린다.
+    //    다만 지금 폼에 올라가 있는 건은 수정 중에 사라지지 않게 남긴다.
+    const endedCosts = props.fixedCosts.filter((cost) => isFixedCostEnded(cost, props.selectedYm))
+    const listedCosts = showEnded
+        ? props.fixedCosts
+        : props.fixedCosts.filter((cost) => (
+            !isFixedCostEnded(cost, props.selectedYm) || cost.id === editingId || cost.id === changingId
+        ))
+
+    // 5) 카드 정렬 순번 — 카드 없음이 맨 위, 그 뒤로 등록된 카드 순서. 삭제된 카드는 맨 아래로 밀린다
+    const cardOrder = new Map<string, number>([[NO_CARD, 0]])
+    props.cards.forEach((card, index) => cardOrder.set(card.id, index + 1))
+    const toCardOrder = (id: string): number => cardOrder.get(id) ?? props.cards.length + 1
+
+    // 6) 목록 정렬 — 1) 카드 묶음 2) 이번 달 청구되는 건 3) 항목명
+    const sortedCosts = [...listedCosts].sort((a, b) => {
+        const aCard = toCardOrder(a.cardId)
+        const bCard = toCardOrder(b.cardId)
+        if (aCard !== bCard) return aCard - bCard
+
         const aCharged = chargeByCostId.has(a.id) ? 0 : 1
         const bCharged = chargeByCostId.has(b.id) ? 0 : 1
         if (aCharged !== bCharged) return aCharged - bCharged
+
         return a.name.localeCompare(b.name)
     })
 
@@ -337,15 +358,23 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
                 )}
             </form>
 
-            {/* 3) 등록된 고정비 목록 — 이번 달 청구되는 건이 위로 온다 */}
+            {/* 3) 등록된 고정비 목록 — 카드 없음 → 등록된 카드 순으로 묶고, 묶음 안에서 이번 달 청구되는 건이 위로 온다 */}
             {sortedCosts.length === 0 ? (
-                <p className={'ledger_empty'}>등록된 고정비가 없습니다.</p>
+                <p className={'ledger_empty'}>
+                    {endedCosts.length > 0
+                        ? '이 달에 청구되는 고정비가 없습니다.'
+                        : '등록된 고정비가 없습니다.'}
+                </p>
             ) : (
                 <div className={'ledger_fixed_list'}>
-                    {sortedCosts.map((cost) => {
+                    {sortedCosts.map((cost, index) => {
                         // 3-1) 이번 달 청구 여부 — 없으면 끝난 할부이거나 아직 시작 전
                         const charge = chargeByCostId.get(cost.id)
                         const inactive = charge === undefined
+
+                        // 3-1-1) 카드 묶음의 첫 행 — 앞 행과 카드가 달라지는 지점에 구분선을 준다
+                        const cardName = toCardName(cost.cardId)
+                        const groupStart = index === 0 || sortedCosts[index - 1].cardId !== cost.cardId
 
                         // 3-2) 청구가 없는 달에는 정의상 월 금액을 흐리게 보여준다 (0원으로 보이면 등록이 안 된 줄 안다)
                         const displayAmount = charge?.amount ?? (
@@ -358,6 +387,7 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
                         const rowClass = [
                             'ledger_fixed_row',
                             inactive ? ' ledger_fixed_row_inactive' : '',
+                            groupStart ? ' ledger_fixed_row_card_start' : '',
                             cost.id === editingId || cost.id === changingId ? ' ledger_fixed_row_editing' : '',
                         ].join('')
 
@@ -376,7 +406,19 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
                                     {FIXED_COST_TYPE_LABEL[cost.type]}
                                 </span>
                                 <span className={'ledger_fixed_name'}>{cost.name}</span>
-                                <span className={'ledger_fixed_meta'}>{toCardName(cost.cardId)} · {cost.category}</span>
+
+                                {/* 3-2-1) 결제 수단 — 어느 카드에서 빠지는지 행마다 못 박는다 (미지정이면 '카드 없음') */}
+                                <span className={'ledger_fixed_meta'} title={`${cardName} · ${cost.category}`}>
+                                    <span
+                                        className={cost.cardId === NO_CARD
+                                            ? 'ledger_fixed_card ledger_fixed_card_none'
+                                            : 'ledger_fixed_card'}
+                                    >
+                                        {cardName}
+                                    </span>
+                                    {' · '}
+                                    {cost.category}
+                                </span>
 
                                 {/* 3-3) 청구 기간 — 할부는 진행 회차, 고정비는 시작·종료 월 */}
                                 <span
@@ -456,6 +498,20 @@ function LedgerFixedCostPanel(props: LedgerFixedCostPanelProps) {
                         )
                     })}
                 </div>
+            )}
+
+            {/* 4) 종료 항목 펼치기 — 평소엔 접어 두고, 지우거나 되살릴 때만 꺼낸다 */}
+            {endedCosts.length > 0 && (
+                <button
+                    type={'button'}
+                    className={'ledger_fixed_ended_toggle'}
+                    onClick={() => setShowEnded(!showEnded)}
+                    title={'해지한 고정비와 다 갚은 할부입니다'}
+                >
+                    {showEnded
+                        ? `종료된 ${endedCosts.length}건 접기`
+                        : `종료된 ${endedCosts.length}건 보기`}
+                </button>
             )}
         </section>
     )

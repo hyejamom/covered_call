@@ -83,8 +83,12 @@ app.post('/api/state', async (req, res) => {
             return
         }
 
-        // 2) 원자적 저장 후 저장 시각을 돌려준다
-        const snapshot = await saveSnapshot(req.body.workbooks, req.body.activeTabId)
+        // 2) 원자적 저장 후 저장 시각을 돌려준다.
+        //    v2 이하 형태로 들어오면 저장 직전에 JEPQ 칸으로 감싸 현재 구조로 통일한다.
+        const assets = req.body.assets ?? {
+            JEPQ: { workbooks: req.body.workbooks, activeTabId: req.body.activeTabId },
+        }
+        const snapshot = await saveSnapshot(assets)
         res.json({ version: snapshot.version, savedAt: snapshot.savedAt })
     } catch (caught) {
         res.status(500).json({ message: `스냅샷을 저장하지 못했습니다: ${caught.message}` })
