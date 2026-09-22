@@ -1449,6 +1449,21 @@
     white-space: nowrap;
 }
 
+/* 배당금 칸의 건보료 배지 — 매달 나가는 돈이라 월별 칸마다 붙고, 배당에서 빠지는 값이라 경고 톤으로 세운다.
+   (종소세는 1년에 한 번이라 연도 칸 배지로 남는다) */
+.grid_cell_health {
+    padding: 0 5px;
+    border: 1px solid var(--danger-border);
+    border-radius: 999px;
+    background: var(--danger-tint);
+    color: var(--danger-ink);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 15px;
+    white-space: nowrap;
+    cursor: help;
+}
+
 /* 누적 매수금액 칸의 보유주 — 금액 아래 작게 */
 .grid_cell_shares {
     font-size: 12px;
@@ -1582,30 +1597,6 @@
     cursor: help;
 }
 
-/* 종합과세 대상이지만 낼 돈이 0 인 해 — 사실은 같으므로 배지는 남기되 채움을 빼고 테두리만 남겨 톤을 낮춘다 */
-.year_tax_badge_zero {
-    background: transparent;
-    border-style: dashed;
-    font-weight: 600;
-    opacity: 0.75;
-}
-
-/* 건보료 배지 — 세금이 아니라 보험료라 종소세 배지와 색을 구분한다 */
-.year_health_badge {
-    flex-basis: 100%;
-    padding: 1px 8px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: var(--sand, #f6e6cb);
-    color: var(--text-base);
-    font-size: 11.5px;
-    font-weight: 700;
-    letter-spacing: 0;
-    white-space: nowrap;
-    text-align: center;
-    cursor: help;
-}
-
 /* ISA 만기 정산 배지 — 해마다 내는 돈이 아니라 마지막 해에 한 번 붙는 값이라 세이지로 따로 읽히게 한다 */
 .year_isa_badge {
     flex-basis: 100%;
@@ -1711,6 +1702,88 @@
     color: var(--danger-ink);
     font-weight: 700;
     white-space: normal;
+}
+
+/* 주가 변동률 칸 — 미리보기 문구가 길어 가로 한 줄로는 안 되므로 이 칸만 세로로 쌓는다 */
+.range_field_drift {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+/* 입력줄 — 라벨 + 입력칸 + 프리셋 버튼. 폭이 모자라면 버튼 묶음이 아랫줄로 접힌다 */
+.drift_head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    row-gap: 8px;
+}
+
+/* 세로로 쌓인 칸이라 미리보기 문구는 줄바꿈을 허용한다 */
+.range_field_drift .drift_preview {
+    white-space: normal;
+}
+
+/* 시나리오 프리셋 버튼 묶음 — 보수 · 중립 · 낙관 */
+.drift_preset_row {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    margin-left: 4px;
+}
+
+/* 프리셋 버튼 1개 — 위에 이름(보수), 아래에 값(-4%) */
+.drift_preset_btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding: 5px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--bg-cell);
+    color: var(--text-base);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.drift_preset_btn:hover {
+    border-color: var(--accent-border);
+    background: var(--accent-tint);
+}
+
+/* 지금 입력된 값과 일치하는 프리셋 — 어느 시나리오를 보고 있는지 한눈에 드러나게 채운다 */
+.drift_preset_btn_active {
+    border-color: var(--accent-border);
+    background: var(--accent-fill);
+    color: var(--accent-ink);
+}
+
+.drift_preset_name {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.drift_preset_value {
+    font-size: 11px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.85;
+}
+
+/* 세 프리셋 어느 것과도 다른 값 — 근거가 붙지 않은 가정임을 옅게 짚어 준다 */
+.drift_preset_custom {
+    align-self: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--warning-tint);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--warning-ink);
+    white-space: nowrap;
 }
 
 .range_hint {

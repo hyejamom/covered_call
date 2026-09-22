@@ -33,6 +33,7 @@ import { useMarketInfo } from './hooks/useMarketInfo'
 import { useWorkbooks } from './hooks/useWorkbooks'
 import { hasGrowthPlan, hasWithdrawSchedule, toYm } from './services/simulationEngine'
 import type {
+    HealthInsuranceEstimate,
     MonthlyResult,
     SimulationConstants,
     SimulationResult,
@@ -268,6 +269,13 @@ interface YearBlockProps {
     result: SimulationResult
     /** 워크북(엑셀 파일) 합산 연간 요약 — 과세 판정 근거 표기용 */
     workbookSummary: WorkbookYearSummary | undefined
+    /**
+     * 이 해에 "실제로 내는" 건강보험료 — 전년도 소득으로 정해진 추정치다.
+     * 건보료는 소득이 생긴 해가 아니라 이듬해 1~12월에 매달 나가므로, 그 해 요약이 아니라 전년도 요약에서 가져온다.
+     */
+    healthDue: HealthInsuranceEstimate | undefined
+    /** 건강보험료율 (%) — 건보료 배지 툴팁의 산출 근거 문구에 들어간다 */
+    healthRatePercent: number
     /** 주력 종목 표기명 — 셀 툴팁의 이관 안내 문구에 들어간다 */
     assetLabel: string
     /** ISA 계좌인지 — 연도 배지 구성이 통째로 갈린다 */
@@ -298,35 +306,27 @@ function YearBlock(props: YearBlockProps) {
                 + ` = ${props.assetLabel} 배당 ${formatKrw(props.workbookSummary.dividendGross)}원`
                 + ` + 성장자산 배당 ${formatKrw(props.workbookSummary.growthDividendGross)}원(재투자분)`
                 + ` · 미국 원천징수 합계 ${formatKrw(props.workbookSummary.dividendTax + props.workbookSummary.growthDividendTax)}원`,
-            `[산출세액] ${formatKrw(estimate.calculatedTax)}원`
-                + ` = 종합과세방식 ${formatKrw(estimate.progressiveTax)}원 vs 분리과세방식 ${formatKrw(estimate.separateTax)}원 중 큰 값`,
-            `[공제] 외국납부세액공제 ${formatKrw(estimate.foreignCredit)}원`
-                + (estimate.foreignCredit < estimate.foreignPaidTax
-                    ? ` (미국 납부 ${formatKrw(estimate.foreignPaidTax)}원 중 한도까지만 공제)`
-                    : ''),
             `[5월 납부 추정] ${formatKrw(estimate.totalDue)}원`
-                + ` = 소득세 ${formatKrw(estimate.incomeTax)}원 + 지방소득세 ${formatKrw(estimate.localTax)}원`
-                // 종합과세 대상인데도 낼 돈이 0 인 해가 한동안 이어진다 — 왜 0 인지 짚어 주지 않으면 계산이 빠진 것처럼 보인다
-                + (taxDue === 0
-                    ? '\n※ 종합과세 대상 연도지만 5월에 추가로 낼 돈은 없습니다 —'
-                        + ' 산출세액이 미국에 이미 낸 원천징수(15%)보다 작아 외국납부세액공제로 전액 상계되기 때문입니다.'
-                        + ' 배당이 더 커져 누진세율 구간이 15% 를 넘어서는 해부터 실제 납부액이 붙습니다.'
-                    : ''),
-            '※ 배당 외 종합소득이 없다고 본 추정치이며, 계좌 밖에서 내는 돈이라 매수·재투자 계산에는 반영하지 않습니다.',
+                + ` = 연 세전 배당 ${formatKrw(estimate.financialIncome)}원 × ${estimate.ratePercent}%`,
+            '※ 종합소득세는 1년에 한 번, 이듬해 5월에 몰아서 냅니다 (매달 나가는 건보료와 다릅니다).',
+            `※ 누진세율·공제를 따지지 않고 ${estimate.ratePercent}% 로 아주 보수적으로 잡은 추정치이며,`
+                + ' 계좌 밖에서 내는 돈이라 매수·재투자 계산에는 반영하지 않습니다.',
         ].join('\n')
         : ''
 
-    // 5) 그 해 건강보험료 추정 — 종소세와 달리 매달 나가는 고정비라 월 금액을 앞세운다
-    const health = props.workbookSummary?.healthInsurance
+    // 5) 이 해에 매달 빠지는 건강보험료 — 전년도 소득으로 정해진 값이라 판정 근거도 전년도 기준으로 적는다
+    const health = props.healthDue
     const healthTitle = health && health.applies
         ? [
-            `[판정] 연 금융소득 ${formatKrw(health.chargeableIncome)}원(${props.assetLabel} 배당 + 재투자된 성장자산 배당) — 피부양자 한도 초과로 지역가입자 전환`,
-            `[월 보험료] ${formatKrw(health.monthlyTotal)}원`
-                + ` = 건강보험료 ${formatKrw(health.monthlyHealth)}원 + 장기요양보험료 ${formatKrw(health.monthlyLongTermCare)}원`
-                + (health.capped ? ' (월 상한 적용 — 소득이 더 늘어도 건강보험료는 고정)' : ''),
-            `[연 합계] ${formatKrw(health.yearlyTotal)}원`,
+            `[납부] ${props.year}년 1~12월에 매달 빠지는 건강보험료 — ${props.year - 1}년 배당 소득으로 정해집니다`,
+            `[판정] ${props.year - 1}년 세전 배당 ${formatKrw(health.financialIncome)}원`
+                + ` (${props.assetLabel} 배당 + 재투자된 성장자산 배당)`,
+            `[부과 소득] ${formatKrw(health.financialIncome)}원 − 기준 ${formatKrw(health.financialIncome - health.chargeableIncome)}원`
+                + ` = ${formatKrw(health.chargeableIncome)}원 → ÷ 12개월 = ${formatKrw(health.monthlyChargeableIncome)}원`,
+            `[월 보험료] ${formatKrw(health.monthlyChargeableIncome)}원 × ${props.healthRatePercent}%`
+                + ` = ${formatKrw(health.monthlyPremium)}원 (연 ${formatKrw(health.yearlyPremium)}원)`,
             '※ 소득 부과분만 계산한 값입니다. 재산·자동차 부과분은 포함되지 않아 실제 고지액은 이보다 큽니다.',
-            '※ 실제 반영은 이듬해 11월 정산분부터이며, 세금이 아니라 매수·재투자 계산에는 넣지 않습니다.',
+            '※ 세금이 아니라 보험료이고 계좌 밖에서 나가는 돈이라 매수·재투자 계산에는 넣지 않습니다.',
         ].join('\n')
         : ''
 
@@ -382,22 +382,11 @@ function YearBlock(props: YearBlockProps) {
                             ({age}세)
                         </span>
                     )}
-                    {/* 종합과세 연도 배지 — 낼 돈이 0 인 해도 "종합과세 대상"이라는 사실은 같으므로
-                        배지는 붙이되 톤을 낮춰 실제로 돈이 나가는 해와 구분한다 */}
+                    {/* 종합과세 연도 배지 — 1년에 한 번 5월에 몰아서 내는 돈이라 연도 칸에 한 줄로 붙인다.
+                        매달 나가는 건보료는 성격이 달라 배당금 행의 월별 칸에 따로 붙는다 */}
                     {taxed && (
-                        <span
-                            className={taxDue > 0 ? 'year_tax_badge' : 'year_tax_badge year_tax_badge_zero'}
-                            title={badgeTitle}
-                        >
-                            {taxDue > 0
-                                ? `5월 종소세 ${formatKrw(taxDue)}원`
-                                : '종합과세 대상 · 추가 납부 없음'}
-                        </span>
-                    )}
-                    {/* 건보료는 매달 빠지는 고정비라 월 금액으로 따로 붙인다 */}
-                    {health?.applies === true && (
-                        <span className={'year_health_badge'} title={healthTitle}>
-                            {`건보료 월 ${formatKrw(health.monthlyTotal)}원`}
+                        <span className={'year_tax_badge'} title={badgeTitle}>
+                            {`종합과세 대상 · 5월 종소세 ${formatKrw(taxDue)}원`}
                         </span>
                     )}
                     {/* ISA 연 납입한도 초과 — 세금이 아니라 "이 계획을 실행할 수 없다"는 경고다 */}
@@ -452,6 +441,13 @@ function YearBlock(props: YearBlockProps) {
                                         {rowLabel === RowLabel.CUMULATIVE && (
                                             <span className={'grid_cell_shares'}>
                                                 {formatShareCount(monthly.shares)}
+                                            </span>
+                                        )}
+                                        {/* 건보료 배지 — 전년도 배당으로 정해진 금액을 이 해 매달 낸다.
+                                            배당금에서 빠져나가는 돈이라 세후 배당 바로 아래에 붙여 함께 읽히게 한다 */}
+                                        {isNominalDividendRow(rowLabel) && health?.applies === true && (
+                                            <span className={'grid_cell_health'} title={healthTitle}>
+                                                {`건보료 −${formatKrw(health.monthlyPremium)}원`}
                                             </span>
                                         )}
                                     </div>
@@ -709,6 +705,9 @@ function App() {
                             birthYm={workbook.birthYm}
                             result={workbook.result}
                             workbookSummary={workbook.workbookResult.byYear[year]}
+                            // 건보료는 전년도 소득으로 정해져 이 해에 매달 나간다 — 그래서 한 해 전 요약에서 가져온다
+                            healthDue={workbook.workbookResult.byYear[year - 1]?.healthInsurance}
+                            healthRatePercent={constants.healthRatePercent}
                             assetLabel={assetMeta.label}
                             isIsa={isIsa}
                             isaAnnualLimitKrw={constants.isaAnnualLimitKrw}

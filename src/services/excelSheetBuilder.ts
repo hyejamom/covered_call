@@ -77,11 +77,12 @@ export function toSheetName(rawName: string, index: number, usedNames: Set<strin
  * 연도 헤더 문구 — 나이와 그 해에 따라붙는 돈을 괄호 안에 함께 담는다
  *
  * 계좌 유형에 따라 붙는 내용이 갈린다.
- *   · 일반 계좌 : "2039 (46세, 5월 종소세 22,759,000원, 건보료 월 1,644,000원)"
+ *   · 일반 계좌 : "2039 (46세, 5월 종소세 22,759,000원, 건보료 월 1,644,000원(2038년 소득 기준))"
  *   · ISA 계좌  : 내는 돈이 아예 없으므로 나이만 적고, 납입한도를 넘긴 해에만 경고를 붙인다
  *
  * @param year 연도 @param birthYm 시트 주인의 생년월
  * @param summary 워크북 합산 연간 요약 — 종합과세 판정과 종소세 추정액의 출처
+ * @param prevSummary 한 해 전 요약 — 건보료는 전년도 소득으로 정해져 이 해에 매달 나가므로 여기서 가져온다
  * @param isa 이 시트의 ISA 납입한도 점검 결과 (일반 계좌면 applies=false)
  * @param firstSellYm 원금을 헐기 시작한 연월 (인출 계획이 없으면 null)
  * @param depletedYm 계좌가 바닥난 연월 (없으면 null)
@@ -90,6 +91,7 @@ function toYearHeadText(
     year: number,
     birthYm: string,
     summary: WorkbookYearSummary | undefined,
+    prevSummary: WorkbookYearSummary | undefined,
     isa: IsaLimitStatus,
     firstSellYm: string | null,
     depletedYm: string | null,
@@ -97,16 +99,13 @@ function toYearHeadText(
     const age = toAgeInYear(birthYm, year)
     const marks = [
         age !== null ? `${age}세` : '',
-        // 종합과세 연도만 표기 — 기준 이하인 해는 원천징수로 끝나 5월에 낼 돈이 없다.
-        // 대상 연도라도 산출세액이 미국 원천징수(15%)에 전부 상계되면 낼 돈이 0 이라, 그 경우는 금액 대신 사실만 적는다.
+        // 종합과세 연도만 표기 — 기준 미만인 해는 원천징수로 끝나 5월에 낼 돈이 없다 (1년에 한 번 내는 돈이다)
         summary?.taxed === true
-            ? (summary.comprehensiveTax.totalDue > 0
-                ? `5월 종소세 ${formatKrw(summary.comprehensiveTax.totalDue)}원`
-                : '종합과세 대상(추가 납부 없음)')
+            ? `5월 종소세 ${formatKrw(summary.comprehensiveTax.totalDue)}원`
             : '',
-        // 건보료는 피부양자 자격을 잃은 해부터 붙는다 (매달 나가는 돈이라 월 금액으로 적는다)
-        summary?.healthInsurance.applies === true
-            ? `건보료 월 ${formatKrw(summary.healthInsurance.monthlyTotal)}원`
+        // 건보료는 전년도 소득으로 정해져 이 해에 매달 나간다 — 그래서 한 해 전 요약에서 가져온다
+        prevSummary?.healthInsurance.applies === true
+            ? `건보료 월 ${formatKrw(prevSummary.healthInsurance.monthlyPremium)}원(${year - 1}년 소득 기준)`
             : '',
         // ISA 연 납입한도를 넘긴 해 — 세액과 무관하지만 실제로는 그만큼 넣을 수 없는 계획이다
         isa.applies && isa.overAnnualLimitYears.includes(year) ? '연 납입한도 초과' : '',
@@ -147,11 +146,16 @@ function buildSheetData(
 
         // 2) 0행 — 연도 + 1월~12월 헤더. 종합과세 연도는 배경색으로 구분하고 예상 세액을 연도 옆에 적는다
         const yearSummary = byYear[year]
+        // 건보료는 전년도 소득으로 정해져 이 해에 매달 나가므로 한 해 전 요약을 함께 넘긴다
+        const prevYearSummary = byYear[year - 1]
         const taxed = result.byYear[year]?.taxed === true
         const headBg = taxed ? COLOR_TAXED_BG : COLOR_HEAD_BG
         const headRow: Row = [
             {
-                value: toYearHeadText(year, birthYm, yearSummary, result.isaLimits, result.firstSellYm, result.depletedYm),
+                value: toYearHeadText(
+                    year, birthYm, yearSummary, prevYearSummary,
+                    result.isaLimits, result.firstSellYm, result.depletedYm,
+                ),
                 fontWeight: 'bold',
                 fontSize: 12,
                 align: 'left',

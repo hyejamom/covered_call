@@ -7,70 +7,47 @@ import { EventType, type InvestEvent, InvestTarget, type SimulationConstants } f
 // 이벤트는 탭별로 독립 관리되며, 새 탭은 이벤트가 하나도 없는 빈 상태로 시작한다.
 // 종목마다 달라지는 값(시세 폴백·통화·계좌 유형·기본 주가 변동률)은 assetConstants 가 들고 있다.
 
-/** 환율 조회 실패 시 쓸 폴백 (원/USD) — 2026-08-10 기준. 원화 종목에서는 쓰이지 않는다 */
-export const FALLBACK_EXCHANGE_RATE = 1420
+/**
+ * 환율 조회 실패 시 쓸 폴백 (원/USD) — 원화 종목에서는 쓰이지 않는다.
+ *
+ * 폴백 시세(주가·월배당)는 2026-08-10 기준이지만 환율만 따로 1,380원으로 잡아 둔다.
+ * 다만 이 값이 결과를 흔들지는 않는다 — 투입이 원화 정액이라 환율이 낮아지면 주가도 배당도 같은 비율로 줄어
+ * "150만원어치 사서 받는 원화 배당"은 그대로이고, 보유 주식 수만 달라진다.
+ * (1,420 → 1,380 으로 내려도 연 세전배당 2,000만원 도달 시점은 같은 해다)
+ */
+export const FALLBACK_EXCHANGE_RATE = 1380
 
 /**
  * 세금 정책 — 고정 상수
  * 미국 주식 배당은 두 단계로 세금을 맞는다.
  * 1) 지급 시점: 미국이 15% 를 떼고 나머지만 입금한다 — 금액과 무관하게 "항상" 적용된다.
- * 2) 이듬해 5월: 연간 세전 금융소득이 2,000만원을 넘은 해는 종합소득세 신고 대상이 되어
- *    누진세율로 다시 계산하고, 이미 낸 미국 원천징수분을 외국납부세액공제로 빼 준 차액을 추가 납부한다.
+ * 2) 이듬해 5월: 연간 세전 금융소득이 2,000만원 이상인 해는 종합소득세 신고 대상이 되어
+ *    1년에 한 번 몰아서 낸다. 세액은 누진 구간을 따지지 않고 "연 세전 배당 × 15%" 로 보수적으로 잡는다.
  */
 export const TAX_POLICY = {
     /** 미국 원천징수 세율 (%) — 배당 지급 시점에 무조건 차감 */
     WITHHOLDING_RATE_PERCENT: 15,
-    /** 금융소득종합과세 기준 (원) — 연간 "세전" 배당 합계가 이 값을 넘으면 5월 종소세 신고 대상 */
+    /** 금융소득종합과세 기준 (원) — 연간 "세전" 배당 합계가 이 값 이상이면 이듬해 5월 종소세 신고 대상 */
     COMPREHENSIVE_THRESHOLD_KRW: 20_000_000,
-    /** 분리과세 세율 (%) — 비교과세(분리과세방식) 산출세액과 기준금액 이하 구간에 쓰는 세율 */
-    SEPARATE_RATE_PERCENT: 14,
-    /** 지방소득세율 (%) — 소득세 결정세액에 얹는다 */
-    LOCAL_RATE_PERCENT: 10,
-    /**
-     * 배당 외 종합소득 (원) — 근로·사업소득 등.
-     * 은퇴 후 배당만 받는 상황을 기본으로 보아 0 으로 둔다. 다른 소득이 있으면 이 값만 올리면 된다.
-     */
-    OTHER_INCOME_KRW: 0,
-    /** 종합소득공제 (원) — 본인 기본공제 150만원만 반영한 최소 가정 */
-    BASIC_DEDUCTION_KRW: 1_500_000,
+    /** 종합소득세 추정 세율 (%) — 대상 연도의 연 세전 배당 전액에 곱하는 보수적 단일 세율 */
+    COMPREHENSIVE_RATE_PERCENT: 15,
 } as const
 
 /**
- * 건강보험료 정책 — 고정 상수 (2025년 기준 요율)
+ * 건강보험료 정책 — 고정 상수
  *
- * 배당만 받는 사람은 결국 지역가입자로 떨어진다. 흐름은 두 단계다.
- * 1) 연 금융소득이 1,000만원을 넘으면 그 순간 "전액"이 건보료 부과 대상 소득으로 잡힌다 (초과분만이 아니다).
- * 2) 합산소득이 2,000만원을 넘으면 피부양자 자격을 잃고 지역가입자로 전환되어 실제로 고지서가 날아온다.
+ * 종합과세와 같은 문턱을 쓴다 — 연 세전 배당이 2,000만원 이상인 해에만 부과되므로
+ * "종소세는 없는데 건보료만 나간다"는 어긋난 구간이 생기지 않는다.
+ * 보험료는 전액이 아니라 기준금액을 뺀 초과분에만 붙고, 그 초과분을 12로 나눈 월 소득에 요율을 곱한다.
+ * 실제 납부는 소득이 생긴 해가 아니라 이듬해 1~12월에 매달 나눠 낸다.
  * 요율은 해마다 바뀌므로 값만 갈아 끼우면 전 구간이 다시 계산된다.
  */
 export const HEALTH_INSURANCE_POLICY = {
-    /** 건강보험료율 (%) — 지역가입자 소득 정률 부과 (2025년 7.09%) */
-    RATE_PERCENT: 7.09,
-    /** 장기요양보험료율 (%) — 건강보험료 대비 (2025년 12.95%) */
-    LONG_TERM_CARE_RATE_PERCENT: 12.95,
-    /** 금융소득 부과 기준 (원) — 연간 금융소득이 이 값을 넘으면 초과분이 아니라 전액이 소득으로 잡힌다 */
-    INCOME_THRESHOLD_KRW: 10_000_000,
-    /** 피부양자 자격 상실 기준 (원) — 연 합산소득이 이 값을 넘으면 지역가입자로 전환된다 */
-    DEPENDENT_LIMIT_KRW: 20_000_000,
-    /** 지역가입자 월 건강보험료 상한 (원) — 2025년 기준. 장기요양보험료는 이 상한 위에 따로 붙는다 */
-    MONTHLY_CAP_KRW: 4_240_710,
+    /** 건강보험료율 (%) — 지역가입자 소득 정률 부과 */
+    RATE_PERCENT: 7.19,
+    /** 부과 기준 (원) — 연 세전 배당이 이 값 이상일 때만 부과되고, 초과분만 부과 대상 소득이 된다 */
+    INCOME_THRESHOLD_KRW: 20_000_000,
 } as const
-
-/**
- * 종합소득세 누진세율표 (2026년 기준)
- * — limit: 과세표준 상한(원) / ratePercent: 세율(%) / deduction: 누진공제액(원)
- *   산출세액 = 과세표준 × 세율 − 누진공제액
- */
-export const INCOME_TAX_BRACKETS = [
-    { limit: 14_000_000, ratePercent: 6, deduction: 0 },
-    { limit: 50_000_000, ratePercent: 15, deduction: 1_260_000 },
-    { limit: 88_000_000, ratePercent: 24, deduction: 5_760_000 },
-    { limit: 150_000_000, ratePercent: 35, deduction: 15_440_000 },
-    { limit: 300_000_000, ratePercent: 38, deduction: 19_940_000 },
-    { limit: 500_000_000, ratePercent: 40, deduction: 25_940_000 },
-    { limit: 1_000_000_000, ratePercent: 42, deduction: 35_940_000 },
-    { limit: Number.POSITIVE_INFINITY, ratePercent: 45, deduction: 65_940_000 },
-] as const
 
 /**
  * 물가 정책 — 고정 상수
@@ -166,15 +143,9 @@ export function resolveConstants(
         // ISA 계좌 안의 배당은 뗄 세금이 없어 지급액 전액이 그대로 들어온다
         withholdingRatePercent: isIsa ? 0 : TAX_POLICY.WITHHOLDING_RATE_PERCENT,
         comprehensiveThresholdKrw: TAX_POLICY.COMPREHENSIVE_THRESHOLD_KRW,
-        separateRatePercent: TAX_POLICY.SEPARATE_RATE_PERCENT,
-        localRatePercent: TAX_POLICY.LOCAL_RATE_PERCENT,
-        otherIncomeKrw: TAX_POLICY.OTHER_INCOME_KRW,
-        basicDeductionKrw: TAX_POLICY.BASIC_DEDUCTION_KRW,
+        comprehensiveRatePercent: TAX_POLICY.COMPREHENSIVE_RATE_PERCENT,
         healthRatePercent: HEALTH_INSURANCE_POLICY.RATE_PERCENT,
-        longTermCareRatePercent: HEALTH_INSURANCE_POLICY.LONG_TERM_CARE_RATE_PERCENT,
         healthIncomeThresholdKrw: HEALTH_INSURANCE_POLICY.INCOME_THRESHOLD_KRW,
-        dependentLimitKrw: HEALTH_INSURANCE_POLICY.DEPENDENT_LIMIT_KRW,
-        healthMonthlyCapKrw: HEALTH_INSURANCE_POLICY.MONTHLY_CAP_KRW,
         inflationRatePercent: INFLATION_POLICY.RATE_PERCENT,
         inflationBaseYear: INFLATION_POLICY.BASE_YEAR,
         isaAnnualLimitKrw: ISA_POLICY.ANNUAL_LIMIT_KRW,

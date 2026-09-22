@@ -43,8 +43,14 @@ export const AnalysisSymbol = {
     GOOGL: 'GOOGL',
     /** 메타 플랫폼스 */
     META: 'META',
+    /** 오라클 */
+    ORCL: 'ORCL',
     /** 엔비디아 */
     NVDA: 'NVDA',
+    /** AMD */
+    AMD: 'AMD',
+    /** 인텔 */
+    INTC: 'INTC',
     /** 테슬라 */
     TSLA: 'TSLA',
     /** 팔란티어 테크놀로지스 */
@@ -105,11 +111,31 @@ export const ANALYSIS_SYMBOL_META: Record<AnalysisSymbol, AnalysisSymbolMeta> = 
         waitingNote: '반년 만에 70% 빠졌다가 되돌린 이력(2022년)이 있어 이격도 폭 자체가 넓습니다.'
             + ' 매수선이 열려도 한참 더 내려갈 수 있으니 한 번에 전액을 넣는 방식과는 맞지 않습니다.',
     },
+    [AnalysisSymbol.ORCL]: {
+        ticker: 'ORCL',
+        name: '오라클 · 개별 종목',
+        waitingNote: 'AI 클라우드 수주 기대로 크게 오른 뒤 되돌린 구간이라, 기준선이 그 고점 구간을 물고 높게 깔려 있습니다.'
+            + ` ${SMA_LONG_WEEKS}주선 아래로 내려와도 싸진 것인지 기대가 꺾인 것인지 이 지표는 구분해 주지 못합니다.`
+            + ' 배당은 연 1%대라 기다리는 값은 대부분 상승분으로 치릅니다.',
+    },
     [AnalysisSymbol.NVDA]: {
         ticker: 'NVDA',
         name: '엔비디아 · 개별 종목',
         waitingNote: '몇 년째 추세가 가팔라 기준선이 현재가에서 한참 아래에 깔려 있습니다.'
             + ' 매수선이 열린다면 그건 싸진 게 아니라 추세가 꺾였다는 뜻일 수 있으니 값만 보고 들어가지 마세요.',
+    },
+    [AnalysisSymbol.AMD]: {
+        ticker: 'AMD',
+        name: 'AMD · 개별 종목',
+        waitingNote: '2015년 2달러 아래까지 밀렸다가 수백 배가 된 종목이라, 지금과 전혀 다른 회사 시절이 표본에 통째로 섞여 있습니다.'
+            + ' 무배당이고 엔비디아와 같은 뉴스에 함께 움직이니, 둘을 같이 담으면 분산이 되지 않습니다.',
+    },
+    [AnalysisSymbol.INTC]: {
+        ticker: 'INTC',
+        name: '인텔 · 개별 종목',
+        waitingNote: '2024년에 배당을 중단한 뒤 아직 재개하지 않아, 기다리는 동안 받는 것이 없습니다.'
+            + ' 파운드리 전환을 거치며 주가가 몇 배로 뛴 구간이 최근 표본을 채우고 있어 기준선이 현재가 한참 아래에 깔립니다 —'
+            + ' 매수선이 열린다면 싸진 게 아니라 그 전환에 걸린 기대가 꺾였다는 뜻일 수 있습니다.',
     },
     [AnalysisSymbol.TSLA]: {
         ticker: 'TSLA',
@@ -144,7 +170,10 @@ export const ANALYSIS_SYMBOL_ORDER: AnalysisSymbol[] = [
     AnalysisSymbol.QQQ,
     AnalysisSymbol.GOOGL,
     AnalysisSymbol.META,
+    AnalysisSymbol.ORCL,
     AnalysisSymbol.NVDA,
+    AnalysisSymbol.AMD,
+    AnalysisSymbol.INTC,
     AnalysisSymbol.TSLA,
     AnalysisSymbol.PLTR,
     AnalysisSymbol.SAMSUNG,

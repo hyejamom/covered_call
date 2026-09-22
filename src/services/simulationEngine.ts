@@ -37,12 +37,15 @@ import { NO_ISA_LIMIT_STATUS, evaluateIsaLimits } from './isaLimitEngine'
 //                   ISA 계좌는 이 단계가 통째로 없다(원천징수율 0). 국내 ETF 라 미국이 뗄 것도 없고 계좌 안에서 과세되지도 않아
 //                   지급액 전액이 그대로 손에 들어오고, 재투자 구간이면 그 전액이 그대로 재매수에 쓰인다.
 // [종합과세]        일반 계좌 전용. 판정 단위는 워크북(엑셀 파일) 전체이고, 그 안 모든 시트의 "연간 세전 배당 합계"가
-//                   2,000만원을 넘는 해는 이듬해 5월 종합소득세 신고 대상이 된다.
+//                   2,000만원 이상인 해는 이듬해 5월 종합소득세 신고 대상이 된다 (세액은 그 합계 × 15% 로 보수적으로 잡는다).
+//                   1년에 한 번 몰아서 내는 돈이라 연도 헤더에 배지 하나로 표기한다.
 //                   이때 낼 돈은 위 원천징수와 별개로 추정만 하고 현금흐름에서 빼지 않는다 —
 //                   실제 납부는 이듬해 5월이고 재원도 계좌 밖일 수 있어, 표에는 "그 해 옆에 붙는 예상 고지서"로만 둔다.
 //                   ISA 계좌의 소득은 애초에 이 합산에 들어가지 않으므로 판정 자체를 건너뛴다.
-// [건강보험료]      마찬가지로 일반 계좌 전용. 금융소득이 커지면 피부양자 자격을 잃고 지역가입자 보험료가 붙는다.
-//                   세금이 아니라 매수 계산에는 넣지 않지만, 종소세보다 먼저 체감되는 고정비라 연도 요약에 같이 붙여 둔다.
+// [건강보험료]      마찬가지로 일반 계좌 전용이고, 문턱도 종합과세와 같은 2,000만원이다 — 한쪽만 걸리는 해는 나오지 않는다.
+//                   기준금액을 뺀 초과분을 12로 나눈 월 소득에 요율을 곱하며, 실제 납부는 이듬해 1~12월에 매달 나간다.
+//                   그래서 화면에서는 소득이 생긴 해가 아니라 "이듬해" 배당금 칸에 월 배지로 붙인다.
+//                   세금이 아니라 매수 계산에는 넣지 않지만, 종소세보다 먼저 체감되는 고정비라 연도 요약에 같이 담아 둔다.
 // [ISA 납입한도]   ISA 계좌 전용이자 ISA 에 남는 유일한 제약이다. 연 2,000만원 · 총 1억원을 넘는 계획은
 //                   세금이 달라지는 것이 아니라 애초에 그만큼 넣을 수 없어 실행 자체가 불가능하다.
 //                   계좌는 사람마다 하나이므로 워크북 합산이 아니라 시트 단위로 판정한다.
@@ -684,14 +687,14 @@ export function runWorkbookSimulation(
         const yearGrowthTax = passes.reduce((sum, pass) => sum + pass.growthTaxTotal, 0)
 
         const financialIncome = yearGross + yearGrowthGross
-        const withheldTotal = yearTax + yearGrowthTax
 
         // 3-1) ISA 계좌의 소득은 종합과세·건보료 어느 쪽에도 잡히지 않는다.
         //      판정에 넣는 금융소득을 0 으로 두면 두 추정이 모두 "해당 없음"으로 떨어져 연도 배지가 사라진다.
+        //      종소세와 건보료는 같은 기준금액을 쓰므로 한쪽만 걸리는 해는 나오지 않는다.
         const chargeableIncome = isIsa ? 0 : financialIncome
-        const taxed = chargeableIncome > constants.comprehensiveThresholdKrw
-        const comprehensiveTax = estimateComprehensiveTax(chargeableIncome, isIsa ? 0 : withheldTotal, constants)
+        const comprehensiveTax = estimateComprehensiveTax(chargeableIncome, constants)
         const healthInsurance = estimateHealthInsurance(chargeableIncome, constants)
+        const taxed = comprehensiveTax.applies
 
         // 4) 시트별 결과 반영 + 다음 해로 상태 이월
         passes.forEach((pass, index) => {

@@ -134,26 +134,17 @@ export interface SimulationConstants {
      * 미국 상장 종목은 15%, ISA 계좌 안의 국내 ETF 는 떼는 세금이 없어 0 이 들어온다.
      */
     withholdingRatePercent: number
-    /** 금융소득종합과세 기준 금액 (원) — 연간 "세전" 배당 합산이 이 값을 초과하면 5월 종소세 신고 대상 */
+    /** 금융소득종합과세 기준 금액 (원) — 연간 "세전" 배당 합산이 이 값 이상이면 이듬해 5월 종소세 신고 대상 */
     comprehensiveThresholdKrw: number
-    /** 분리과세 세율 (%) — 비교과세 계산과 기준금액 이하 구간에 쓴다 */
-    separateRatePercent: number
-    /** 지방소득세율 (%) — 소득세 결정세액에 얹는다 */
-    localRatePercent: number
-    /** 배당 외 종합소득 (원) — 근로·사업소득 등. 없다고 보면 0 */
-    otherIncomeKrw: number
-    /** 종합소득공제 (원) — 본인 기본공제 등 */
-    basicDeductionKrw: number
+    /** 종합소득세 추정 세율 (%) — 대상 연도의 연 세전 배당 전액에 곱한다 (보수적 단순 추정) */
+    comprehensiveRatePercent: number
     /** 건강보험료율 (%) — 지역가입자 소득 정률 */
     healthRatePercent: number
-    /** 장기요양보험료율 (%) — 건강보험료 대비 */
-    longTermCareRatePercent: number
-    /** 건보료 부과 기준 금액 (원) — 연 금융소득이 이 값을 넘으면 전액이 부과 대상 소득이 된다 */
+    /**
+     * 건보료 부과 기준 금액 (원) — 연 세전 배당이 이 값 이상인 해에만 부과되며,
+     * 보험료는 전액이 아니라 이 금액을 뺀 초과분에만 붙는다. 종합과세 기준과 같은 값이다.
+     */
     healthIncomeThresholdKrw: number
-    /** 피부양자 자격 상실 기준 금액 (원) — 넘으면 지역가입자로 전환된다 */
-    dependentLimitKrw: number
-    /** 지역가입자 월 건강보험료 상한 (원) */
-    healthMonthlyCapKrw: number
     /** 연 물가상승률 (%) — 미래 배당금을 기준연도 화폐가치로 되돌릴 때 쓰는 할인율 */
     inflationRatePercent: number
     /** 실질가치 환산 기준연도 — 이 해 1월의 화폐가치를 1로 본다 */
@@ -270,50 +261,36 @@ export interface MonthlyResult {
 
 /**
  * 이듬해 5월 종합소득세 신고 추정 결과 — 한 해분
- * 미국에서 이미 뗀 15% 를 외국납부세액공제로 빼고 남는 "추가 납부액"을 잡는 것이 목적이다.
+ * 1년에 한 번, 5월에 몰아서 내는 돈이라 연 금액 하나로만 잡는다.
  */
 export interface ComprehensiveTaxEstimate {
-    /** 종합과세 대상 연도인지 — 세전 금융소득이 기준(2,000만원)을 넘었는지 */
+    /** 종합과세 대상 연도인지 — 세전 금융소득이 기준(2,000만원) 이상인지 */
     applies: boolean
     /** 판정 대상이 된 그 해 세전 금융소득 (원) */
     financialIncome: number
-    /** 종합과세방식 산출세액 (원) — 기준금액 초과분에 누진세율, 기준금액까지는 14% */
-    progressiveTax: number
-    /** 분리과세방식(비교과세) 산출세액 (원) — 금융소득 전액 × 14% */
-    separateTax: number
-    /** 산출세액 (원) — 위 둘 중 큰 값을 쓴다 (비교과세) */
-    calculatedTax: number
-    /** 미국에 이미 낸 원천징수 세액 (원) */
-    foreignPaidTax: number
-    /** 외국납부세액공제액 (원) — 산출세액 한도 안에서만 빼 준다 */
-    foreignCredit: number
-    /** 소득세 결정세액 (원) = 산출세액 − 외국납부세액공제 */
-    incomeTax: number
-    /** 지방소득세 (원) = 결정세액 × 10% */
-    localTax: number
-    /** 5월에 실제로 납부할 추정액 (원) = 결정세액 + 지방소득세 */
+    /** 추정에 쓴 세율 (%) — 누진 구간을 따지지 않고 전액에 곱하는 보수적 단일 세율 */
+    ratePercent: number
+    /** 이듬해 5월에 납부할 추정액 (원) = 세전 금융소득 × 세율 */
     totalDue: number
 }
 
 /**
- * 건강보험료 추정 결과 — 한 해분
- * 세금이 아니라 보험료지만, 금융소득이 커지면 종소세보다 먼저 아프기 때문에 함께 잡아 둔다.
+ * 건강보험료 추정 결과 — 한 해 소득 기준
+ * 세금이 아니라 보험료이고, 이 소득으로 정해진 금액을 "이듬해" 1~12월에 매달 나눠 낸다.
  */
 export interface HealthInsuranceEstimate {
-    /** 실제로 보험료가 부과되는지 — 피부양자 자격을 잃고 지역가입자로 전환됐는지 */
+    /** 실제로 보험료가 부과되는지 — 기준금액 초과분이 있어 월 보험료가 붙는지 */
     applies: boolean
-    /** 건보료 부과 대상 소득 (원) — 기준 초과 시 초과분이 아니라 금융소득 전액 */
+    /** 판정 대상이 된 그 해 세전 금융소득 (원) */
+    financialIncome: number
+    /** 건보료 부과 대상 소득 (원) — 금융소득에서 기준금액(2,000만원)을 뺀 초과분 */
     chargeableIncome: number
-    /** 월 건강보험료 (원) */
-    monthlyHealth: number
-    /** 월 장기요양보험료 (원) */
-    monthlyLongTermCare: number
-    /** 월 납부 합계 (원) */
-    monthlyTotal: number
-    /** 연 납부 합계 (원) */
-    yearlyTotal: number
-    /** 월 상한에 걸려 깎였는지 — 걸렸다면 소득이 더 늘어도 보험료는 그대로다 */
-    capped: boolean
+    /** 부과 대상 소득의 월 환산액 (원) = 초과분 ÷ 12 */
+    monthlyChargeableIncome: number
+    /** 월 건강보험료 (원) = 월 환산액 × 요율 */
+    monthlyPremium: number
+    /** 연 납부 합계 (원) = 월 보험료 × 12 */
+    yearlyPremium: number
 }
 
 /**
@@ -403,7 +380,7 @@ export interface WorkbookYearSummary {
     taxed: boolean
     /** 이듬해 5월 종소세 신고 추정 — 워크북 합산 기준으로 한 번만 계산한다 */
     comprehensiveTax: ComprehensiveTaxEstimate
-    /** 그 해 소득 기준 건강보험료 추정 — 마찬가지로 워크북 합산 기준 */
+    /** 그 해 소득 기준 건강보험료 추정 — 마찬가지로 워크북 합산 기준. 실제 납부는 이듬해 1~12월에 매달 나눠 낸다 */
     healthInsurance: HealthInsuranceEstimate
 }
 

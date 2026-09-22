@@ -11,7 +11,10 @@ import {
     AccountType,
     CALC_ASSET_META,
     type CalcAsset,
+    DRIFT_PRESETS,
+    DRIFT_SCENARIO_ORDER,
     UNDERLYING_LONG_RUN_RETURN_PERCENT,
+    toActiveDriftScenario,
 } from '../constants/assetConstants'
 import { SELECTABLE_YEARS } from '../constants/gridConstants'
 import { PRICE_DRIFT_POLICY } from '../constants/simulationDefaults'
@@ -24,6 +27,15 @@ import YearMonthPicker from './YearMonthPicker'
 
 /** 생년월 선택 가능 하한 연도 */
 const BIRTH_MIN_YEAR = 1940
+
+/**
+ * 부호를 붙인 % 표기 — 프리셋 버튼에 '-2.5%' / '0%' / '+4.5%' 로 찍는다
+ * @param percent 연 주가 변동률 (%)
+ */
+function toSignedPercentLabel(percent: number): string {
+    if (percent === 0) return '0%'
+    return `${percent > 0 ? '+' : ''}${percent}%`
+}
 
 /**
  * 생년월 선택용 연도 목록 — 1940년부터 대상 기간 시작 연도까지 (최신 연도가 위로 오게 내림차순)
@@ -461,6 +473,16 @@ function FilterPanel(props: FilterPanelProps) {
     // 8-2) 기초지수 장기 수익률을 넘는 가정인지 — 커버드콜은 상승분을 팔아 분배금을 만드므로 지수를 이길 수 없다
     const overOptimistic = netTotalWithDrift > UNDERLYING_LONG_RUN_RETURN_PERCENT
 
+    // 8-3) 지금 잡혀 있는 변동률이 어느 시나리오 프리셋과 같은지 — 어느 것도 아니면 '직접 입력'으로 표기한다
+    const activeScenario = toActiveDriftScenario(props.asset, props.sharePriceDriftPercent)
+
+    // ┣━━━━━━━━━━━━━━━━ Handlers ━━━━━━━━━━━━━━━━━━━┫
+
+    /** 주가 시나리오 프리셋 선택 — @param percent 그 시나리오의 연 주가 변동률 (%) */
+    const handleDriftPresetClick = (percent: number) => {
+        props.onDriftChange(percent)
+    }
+
     return (
         <section className={'sim_filter'}>
             {/* 1) 헤더 — 제목 + 고정 세금 정책 메타 배지 */}
@@ -510,21 +532,26 @@ function FilterPanel(props: FilterPanelProps) {
                             </span>
                             <span
                                 className={'sim_meta_item'}
-                                title={'연간 세전 배당 합계가 이 금액을 넘으면 이듬해 5월 종합소득세 신고 대상이 됩니다.'
-                                    + ' 이미 낸 미국 원천징수분은 외국납부세액공제로 빼 주고, 남는 차액만 추가로 냅니다.'}
+                                title={'연간 세전 배당 합계가 이 금액 이상이면 이듬해 5월 종합소득세 신고 대상이 됩니다.'
+                                    + ` 세액은 누진세율·공제를 따지지 않고 "연 세전 배당 × ${props.constants.comprehensiveRatePercent}%" 로 아주 보수적으로 잡습니다.`
+                                    + ' 1년에 한 번, 5월에 몰아서 내는 돈이라 연도 칸에 배지로 붙습니다.'}
                             >
                                 <span className={'sim_meta_key'}>종합과세 기준</span>
-                                <span className={'sim_meta_value'}>{formatKrw(props.constants.comprehensiveThresholdKrw)}원 / 년</span>
+                                <span className={'sim_meta_value'}>
+                                    {formatKrw(props.constants.comprehensiveThresholdKrw)}원 / 년 · {props.constants.comprehensiveRatePercent}%
+                                </span>
                             </span>
                             <span
                                 className={'sim_meta_item'}
-                                title={'연 금융소득이 1,000만원을 넘으면 전액이 건보료 부과 소득으로 잡히고,'
-                                    + ' 2,000만원을 넘으면 피부양자 자격을 잃어 지역가입자 보험료가 부과됩니다.'
+                                title={`연 세전 배당이 ${formatKrw(props.constants.healthIncomeThresholdKrw)}원 이상인 해에만 부과되며(종합과세와 같은 문턱),`
+                                    + ' 전액이 아니라 그 기준금액을 뺀 초과분에만 붙습니다.'
+                                    + ` 초과분 ÷ 12개월 × ${props.constants.healthRatePercent}% 가 월 보험료입니다.`
+                                    + ' 납부는 이듬해 1~12월에 매달 나눠 내므로 배당금 칸에 월 배지로 붙습니다.'
                                     + ' 소득 부과분만 계산하며 재산·자동차 부과분은 빠져 있습니다.'}
                             >
                                 <span className={'sim_meta_key'}>건보료</span>
                                 <span className={'sim_meta_value'}>
-                                    {props.constants.healthRatePercent}% + 장기요양 {props.constants.longTermCareRatePercent}%
+                                    {formatKrw(props.constants.healthIncomeThresholdKrw)}원 초과분 × {props.constants.healthRatePercent}%
                                 </span>
                             </span>
                         </>
@@ -671,33 +698,74 @@ function FilterPanel(props: FilterPanelProps) {
                 </span>
             </div>
 
-            {/* 3-1) 연 주가 변동률 — 종목 성격에 맞는 주가 시나리오를 잡는 값 (파일 단위) */}
-            <div className={'range_field'}>
-                <span className={'range_label'}>{meta.shortLabel} 주가</span>
-                <div className={'range_picker'}>
-                    <input
-                        className={'event_field drift_input'}
-                        type={'number'}
-                        step={0.5}
-                        min={PRICE_DRIFT_POLICY.MIN_PERCENT}
-                        max={PRICE_DRIFT_POLICY.MAX_PERCENT}
-                        value={props.sharePriceDriftPercent}
-                        onChange={(e) => props.onDriftChange(Number(e.target.value))}
-                    />
-                    <span className={'range_span'}>% / 년</span>
-                    {/* 미리보기 — 입력한 연 변동률이 월 복리로 얼마나 쌓이는지와,
-                        그 가정이 만들어 내는 세후 총수익률을 함께 보여 준다.
-                        총수익률이 기초지수 장기 수익률(연 13% 안팎)을 넘어서면 성립하기 어려운 가정이므로 경고 톤으로 바꾼다 */}
-                    <span className={overOptimistic ? 'drift_preview drift_preview_warn' : 'drift_preview'}>
-                        {props.sharePriceDriftPercent === 0
-                            ? '주가 고정 — 배당수익률 그대로가 총수익'
-                            : `월 ${monthlyDriftPercent.toFixed(3)}% 복리 · ${yearSpan}년 후 주가 ${driftMultiple.toFixed(2)}배`
-                                + ` · 세후 총수익 연 ${netTotalWithDrift.toFixed(2)}%`}
-                        {overOptimistic && ` — 나스닥100 장기 수익률(연 ${UNDERLYING_LONG_RUN_RETURN_PERCENT}% 안팎)을 넘습니다`}
-                    </span>
+            {/* 3-1) 연 주가 변동률 — 종목 성격에 맞는 주가 시나리오를 잡는 값 (파일 단위).
+                미리보기 문구가 길어 한 줄에 다 붙지 않으므로, 이 칸만 세로 3단(입력줄 / 미리보기 / 안내)으로 쌓는다 */}
+            <div className={'range_field range_field_drift'}>
+
+                {/* 3-1-1) 입력줄 — 직접 입력 칸 + 시나리오 프리셋 버튼 */}
+                <div className={'drift_head'}>
+                    <span className={'range_label'}>{meta.shortLabel} 주가</span>
+                    <div className={'range_picker'}>
+                        <input
+                            className={'event_field drift_input'}
+                            type={'number'}
+                            step={0.5}
+                            min={PRICE_DRIFT_POLICY.MIN_PERCENT}
+                            max={PRICE_DRIFT_POLICY.MAX_PERCENT}
+                            value={props.sharePriceDriftPercent}
+                            onChange={(e) => props.onDriftChange(Number(e.target.value))}
+                        />
+                        <span className={'range_span'}>% / 년</span>
+
+                        {/* 시나리오 프리셋 — 값 하나를 정답으로 박아 두지 않고, 근거가 붙은 세 갈래를 눌러 가며 비교한다.
+                            각 버튼의 title 에 그 값을 그렇게 잡은 근거가 그대로 달려 있다 */}
+                        <div className={'drift_preset_row'}>
+                            {DRIFT_SCENARIO_ORDER.map((scenario) => {
+                                const preset = DRIFT_PRESETS[props.asset][scenario]
+                                const active = scenario === activeScenario
+
+                                return (
+                                    <button
+                                        key={scenario}
+                                        type={'button'}
+                                        className={active ? 'drift_preset_btn drift_preset_btn_active' : 'drift_preset_btn'}
+                                        title={preset.reason}
+                                        onClick={() => handleDriftPresetClick(preset.percent)}
+                                    >
+                                        <span className={'drift_preset_name'}>{preset.label}</span>
+                                        <span className={'drift_preset_value'}>{toSignedPercentLabel(preset.percent)}</span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+
+                        {/* 세 프리셋 어느 것과도 다른 값을 직접 넣은 상태 — 근거가 붙지 않은 가정임을 짚어 준다 */}
+                        {activeScenario === null && (
+                            <span
+                                className={'drift_preset_custom'}
+                                title={'세 시나리오 어느 것과도 다른 값입니다. 버튼을 누르면 근거가 있는 값으로 되돌릴 수 있습니다.'}
+                            >
+                                직접 입력
+                            </span>
+                        )}
+                    </div>
                 </div>
+
+                {/* 3-1-2) 미리보기 — 입력한 연 변동률이 월 복리로 얼마나 쌓이는지와,
+                    그 가정이 만들어 내는 세후 총수익률을 함께 보여 준다.
+                    총수익률이 기초지수 장기 수익률(연 13% 안팎)을 넘어서면 성립하기 어려운 가정이므로 경고 톤으로 바꾼다 */}
+                <span className={overOptimistic ? 'drift_preview drift_preview_warn' : 'drift_preview'}>
+                    {props.sharePriceDriftPercent === 0
+                        ? '주가 고정 — 배당수익률 그대로가 총수익'
+                        : `월 ${monthlyDriftPercent.toFixed(3)}% 복리 · ${yearSpan}년 후 주가 ${driftMultiple.toFixed(2)}배`
+                            + ` · 세후 총수익 연 ${netTotalWithDrift.toFixed(2)}%`}
+                    {overOptimistic && ` — 나스닥100 장기 수익률(연 ${UNDERLYING_LONG_RUN_RETURN_PERCENT}% 안팎)을 넘습니다`}
+                </span>
+
+                {/* 3-1-3) 안내 — 이 값이 무엇을 움직이는지와, 프리셋 버튼의 성격 */}
                 <span className={'range_hint'}>
-                    입력한 연 변동률은 <b>월 복리</b>로 나눠 매달 조금씩 적용됩니다 (연 7% → 월 0.565%) ·
+                    <b>보수 · 중립 · 낙관</b> 버튼은 종목 구조와 실제 주가 이력에 근거를 둔 값입니다 — 버튼에 마우스를 올리면 그 근거가 나옵니다 ·
+                    입력한 연 변동률은 <b>월 복리</b>로 나눠 매달 조금씩 적용됩니다 (연 -2.5% → 월 -0.211%) ·
                     주가가 움직이면 주당 배당도 같은 비율로 따라가 <b>분배율은 유지되고 총수익만</b> 달라집니다 ·
                     커버드콜은 상승분을 팔아 분배금을 만드는 구조라 <b>기초지수를 장기적으로 이기기 어렵습니다</b> —
                     위 "세후 총수익"이 나스닥100 장기 수익률을 넘으면 그만큼 낙관적인 가정입니다 ·
