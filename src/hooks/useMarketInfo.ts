@@ -48,11 +48,10 @@ function toErrorMessage(error: unknown): string {
  * — 시세 / 배당 / 환율을 각각 독립 상태로 관리해 하나가 실패해도 나머지는 표시된다.
  */
 export function useMarketInfo() {
-
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
-    const [quotes, setQuotes] = useState<Record<CalcAsset, AsyncState<QuoteInfo>>>(createInitialMap)          // 종목별 현재가
+    const [quotes, setQuotes] = useState<Record<CalcAsset, AsyncState<QuoteInfo>>>(createInitialMap) // 종목별 현재가
     const [dividends, setDividends] = useState<Record<CalcAsset, AsyncState<DividendInfo>>>(createInitialMap) // 종목별 배당 내역
-    const [rate, setRate] = useState<AsyncState<ExchangeRateInfo>>(INITIAL_STATE)                             // 원/달러 환율 (미국 종목 전용)
+    const [rate, setRate] = useState<AsyncState<ExchangeRateInfo>>(INITIAL_STATE) // 원/달러 환율 (미국 종목 전용)
 
     // ┣━━━━━━━━━━━━━━━━ Effects ━━━━━━━━━━━━━━━━━━━━┫
     useEffect(() => {
@@ -96,9 +95,10 @@ export function useMarketInfo() {
         const quote = quotes[asset]
         const dividend = dividends[asset]
 
-        const yieldPercent = quote.data && dividend.data && quote.data.price > 0
-            ? (dividend.data.ttmDividend / quote.data.price) * 100
-            : null
+        const yieldPercent =
+            quote.data && dividend.data && quote.data.price > 0
+                ? (dividend.data.ttmDividend / quote.data.price) * 100
+                : null
 
         byAsset[asset] = {
             quote,

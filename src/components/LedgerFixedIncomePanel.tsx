@@ -23,13 +23,12 @@ interface LedgerFixedIncomePanelProps {
  * 고정비 패널의 수입 쪽 대칭이라, 시작 월 이후의 달을 펼치면 매번 적지 않아도 자동으로 수입에 잡힌다.
  */
 function LedgerFixedIncomePanel(props: LedgerFixedIncomePanelProps) {
-
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
-    const [name, setName] = useState<string>('')                                             // 등록 폼 항목명
+    const [name, setName] = useState<string>('') // 등록 폼 항목명
     const [category, setCategory] = useState<string>(LEDGER_CATEGORIES[LedgerKind.INCOME][0]) // 등록 폼 분류
-    const [startYm, setStartYm] = useState<string>(props.selectedYm)                         // 등록 폼 시작 월
-    const [amount, setAmount] = useState<string>('')                                         // 등록 폼 월 금액
-    const [editingId, setEditingId] = useState<string | null>(null)                          // 수정 중인 고정 수입 id. null이면 신규 등록 모드
+    const [startYm, setStartYm] = useState<string>(props.selectedYm) // 등록 폼 시작 월
+    const [amount, setAmount] = useState<string>('') // 등록 폼 월 금액
+    const [editingId, setEditingId] = useState<string | null>(null) // 수정 중인 고정 수입 id. null이면 신규 등록 모드
 
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     // 1) 등록 가능 여부 — 항목명과 0보다 큰 금액이 모두 있어야 한다
@@ -132,7 +131,9 @@ function LedgerFixedIncomePanel(props: LedgerFixedIncomePanelProps) {
                     title={'분류'}
                 >
                     {LEDGER_CATEGORIES[LedgerKind.INCOME].map((value) => (
-                        <option key={value} value={value}>{value}</option>
+                        <option key={value} value={value}>
+                            {value}
+                        </option>
                     ))}
                 </select>
                 <input
@@ -155,9 +156,13 @@ function LedgerFixedIncomePanel(props: LedgerFixedIncomePanelProps) {
                     type={'submit'}
                     className={'ledger_submit'}
                     disabled={!submittable}
-                    title={submittable
-                        ? (editingId === null ? '고정 수입을 등록합니다' : '수정 내용을 저장합니다')
-                        : '항목명과 금액을 입력하세요'}
+                    title={
+                        submittable
+                            ? editingId === null
+                                ? '고정 수입을 등록합니다'
+                                : '수정 내용을 저장합니다'
+                            : '항목명과 금액을 입력하세요'
+                    }
                 >
                     {editingId === null ? '등록' : '수정 저장'}
                 </button>
@@ -204,9 +209,7 @@ function LedgerFixedIncomePanel(props: LedgerFixedIncomePanelProps) {
                                 <span className={'ledger_fixed_round'}>
                                     {inactive ? `${income.startYm}~` : `${round}개월째`}
                                 </span>
-                                <span className={'ledger_income_amount'}>
-                                    +{formatKrw(income.amount)}원
-                                </span>
+                                <span className={'ledger_income_amount'}>+{formatKrw(income.amount)}원</span>
                                 <button
                                     type={'button'}
                                     className={'ledger_fixed_edit'}

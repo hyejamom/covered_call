@@ -17,7 +17,6 @@ interface YearMonthPickerProps {
  * 넘겨받은 연도 목록(보통 파일의 대상 기간) 밖의 값은 아예 고를 수 없다.
  */
 function YearMonthPicker(props: YearMonthPickerProps) {
-
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     // 1) 'YYYY-MM' 분해 — 형식이 아니면 둘 다 빈 값
     const parts = props.value.split('-')
@@ -64,7 +63,9 @@ function YearMonthPicker(props: YearMonthPickerProps) {
                 {/* 기간 밖 연도 — 값이 사라져 보이지 않도록 선택지로 남기되 기간 밖임을 표시한다 */}
                 {outOfRange && <option value={year}>{year}년 (기간 밖)</option>}
                 {years.map((item) => (
-                    <option key={item} value={String(item)}>{item}년</option>
+                    <option key={item} value={String(item)}>
+                        {item}년
+                    </option>
                 ))}
             </select>
 
@@ -77,7 +78,9 @@ function YearMonthPicker(props: YearMonthPickerProps) {
             >
                 {month === '' && <option value={''}>월</option>}
                 {MONTH_LABELS.map((label, index) => (
-                    <option key={label} value={String(index + 1).padStart(2, '0')}>{label}</option>
+                    <option key={label} value={String(index + 1).padStart(2, '0')}>
+                        {label}
+                    </option>
                 ))}
             </select>
         </div>

@@ -17,10 +17,9 @@ interface ExcelDownloadButtonProps {
 
 /** 엑셀 다운로드 버튼 — 워크북 1개 = 파일 1개로 내려받는다 */
 function ExcelDownloadButton(props: ExcelDownloadButtonProps) {
-
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
-    const [downloading, setDownloading] = useState<boolean>(false)   // 파일 생성 중 여부
-    const [error, setError] = useState<string | null>(null)          // 생성 실패 메시지
+    const [downloading, setDownloading] = useState<boolean>(false) // 파일 생성 중 여부
+    const [error, setError] = useState<string | null>(null) // 생성 실패 메시지
 
     // ┣━━━━━━━━━━━━━━━━ Handlers ━━━━━━━━━━━━━━━━━━━┫
 

@@ -15,10 +15,9 @@ interface RenameInputProps {
  * Enter/포커스 이탈로 확정, Escape로 취소.
  */
 function RenameInput(props: RenameInputProps) {
-
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
     const inputRef = useRef<HTMLInputElement>(null)
-    const cancelledRef = useRef<boolean>(false)   // Escape 취소 직후의 blur 가 값을 확정하지 못하게 막는 플래그
+    const cancelledRef = useRef<boolean>(false) // Escape 취소 직후의 blur 가 값을 확정하지 못하게 막는 플래그
 
     // ┣━━━━━━━━━━━━━━━━ Effects ━━━━━━━━━━━━━━━━━━━━┫
     useEffect(() => {

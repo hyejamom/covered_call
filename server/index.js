@@ -1,20 +1,10 @@
 import express from 'express'
 import { existsSync } from 'node:fs'
+import { setDefaultAutoSelectFamily } from 'node:net'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
-    LEDGER_FILE_PATH,
-    loadLedger,
-    saveLedger,
-    validateLedger,
-} from './ledgerStore.js'
-import {
-    STATE_FILE_PATH,
-    clearSnapshot,
-    loadSnapshot,
-    saveSnapshot,
-    validateSnapshot,
-} from './stateStore.js'
+import { LEDGER_FILE_PATH, loadLedger, saveLedger, validateLedger } from './ledgerStore.js'
+import { STATE_FILE_PATH, clearSnapshot, loadSnapshot, saveSnapshot, validateSnapshot } from './stateStore.js'
 
 // ══════════ 저장 서버 + 시세 중계 ══════════
 // 프론트가 보내는 상태를 파일로 보관한다. 파일은 둘로 나눠 둔다.
@@ -25,6 +15,12 @@ import {
 //   /api/nasdaq → api.nasdaq.com            (배당 내역)
 // 개발 중에는 Vite 프록시가 같은 경로를 잡아 주지만, 빌드 후에는 그 프록시가 사라진다.
 // 그래서 이 서버가 dist 를 서빙할 때 시세 중계까지 함께 맡아야 화면이 깨지지 않는다.
+
+// Node 20+ 는 IPv6/IPv4 주소를 동시에 시도해 TCP 가 먼저 붙는 쪽을 고른다(happy eyeballs).
+// 그런데 일부 네트워크(사내망 등)는 Yahoo IPv4 경로의 TLS 핸드셰이크를 조용히 버려서,
+// TCP 는 붙었는데 응답이 없는 상태로 10초를 기다리다 "응답 시간 초과"가 난다.
+// 자동 선택을 끄면 OS 가 정한 첫 주소(IPv6 가 있으면 IPv6)로만 붙어 정상 응답을 받는다.
+setDefaultAutoSelectFamily(false)
 
 const PORT = Number(process.env.PORT ?? 3001)
 const ROOT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -69,7 +65,9 @@ app.get('/api/state', async (_req, res) => {
 
         res.json(snapshot)
     } catch (caught) {
-        res.status(500).json({ message: `스냅샷을 읽지 못했습니다: ${caught.message}` })
+        res.status(500).json({
+            message: `스냅샷을 읽지 못했습니다: ${caught.message}`,
+        })
     }
 })
 
@@ -86,12 +84,17 @@ app.post('/api/state', async (req, res) => {
         // 2) 원자적 저장 후 저장 시각을 돌려준다.
         //    v2 이하 형태로 들어오면 저장 직전에 JEPQ 칸으로 감싸 현재 구조로 통일한다.
         const assets = req.body.assets ?? {
-            JEPQ: { workbooks: req.body.workbooks, activeTabId: req.body.activeTabId },
+            JEPQ: {
+                workbooks: req.body.workbooks,
+                activeTabId: req.body.activeTabId,
+            },
         }
         const snapshot = await saveSnapshot(assets)
         res.json({ version: snapshot.version, savedAt: snapshot.savedAt })
     } catch (caught) {
-        res.status(500).json({ message: `스냅샷을 저장하지 못했습니다: ${caught.message}` })
+        res.status(500).json({
+            message: `스냅샷을 저장하지 못했습니다: ${caught.message}`,
+        })
     }
 })
 
@@ -101,7 +104,9 @@ app.delete('/api/state', async (_req, res) => {
         await clearSnapshot()
         res.status(204).end()
     } catch (caught) {
-        res.status(500).json({ message: `스냅샷을 삭제하지 못했습니다: ${caught.message}` })
+        res.status(500).json({
+            message: `스냅샷을 삭제하지 못했습니다: ${caught.message}`,
+        })
     }
 })
 
@@ -121,7 +126,9 @@ app.get('/api/ledger', async (_req, res) => {
 
         res.json(ledger)
     } catch (caught) {
-        res.status(500).json({ message: `가계부를 읽지 못했습니다: ${caught.message}` })
+        res.status(500).json({
+            message: `가계부를 읽지 못했습니다: ${caught.message}`,
+        })
     }
 })
 
@@ -139,7 +146,9 @@ app.post('/api/ledger', async (req, res) => {
         const ledger = await saveLedger(req.body)
         res.json({ version: ledger.version, savedAt: ledger.savedAt })
     } catch (caught) {
-        res.status(500).json({ message: `가계부를 저장하지 못했습니다: ${caught.message}` })
+        res.status(500).json({
+            message: `가계부를 저장하지 못했습니다: ${caught.message}`,
+        })
     }
 })
 
@@ -159,7 +168,10 @@ PROXY_TARGETS.forEach((target) => {
         try {
             // 3) User-Agent 를 붙여 대신 호출 — 없으면 Nasdaq 이 거부한다
             const upstream = await fetch(url, {
-                headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' },
+                headers: {
+                    'User-Agent': 'Mozilla/5.0',
+                    Accept: 'application/json',
+                },
                 signal: controller.signal,
             })
 
@@ -170,7 +182,9 @@ PROXY_TARGETS.forEach((target) => {
             res.send(Buffer.from(await upstream.arrayBuffer()))
         } catch (caught) {
             const reason = caught.name === 'AbortError' ? '응답 시간 초과' : caught.message
-            res.status(502).json({ message: `시세 중계 실패 (${target.origin}): ${reason}` })
+            res.status(502).json({
+                message: `시세 중계 실패 (${target.origin}): ${reason}`,
+            })
         } finally {
             clearTimeout(timer)
         }

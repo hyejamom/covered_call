@@ -13,7 +13,6 @@ import type { AsyncState } from './useMarketInfo'
  * @param symbol 판정할 종목 코드
  */
 export function useTechnical(symbol: string) {
-
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
     const [report, setReport] = useState<AsyncState<TechnicalReport>>({
         data: null,

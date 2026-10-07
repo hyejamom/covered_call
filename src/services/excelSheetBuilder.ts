@@ -6,25 +6,21 @@ import {
     buildGridRows,
     buildYears,
     formatShareCount,
+    toRowDisplayLabel,
 } from '../constants/gridConstants'
 import { formatKrw, toAgeInYear } from '../utils/format'
 import type { GridRowDef } from '../constants/gridConstants'
-import type {
-    IsaLimitStatus,
-    SimulationConstants,
-    SimulationResult,
-    WorkbookYearSummary,
-} from '../types/simulation'
+import type { IsaLimitStatus, SimulationConstants, SimulationResult, WorkbookYearSummary } from '../types/simulation'
 import type { Workbook } from '../types/workbook'
 import { hasGrowthPlan, hasWithdrawSchedule, runWorkbookSimulation, toYm } from './simulationEngine'
 
 // ══════════ 스타일 상수 ══════════
 
 // 화면과 같은 컨셉 팔레트(A0937D · E7D4B5 · F6E6CB · B6C7AA)를 엑셀에도 그대로 쓴다
-const COLOR_HEAD_BG = '#E7D4B5'      // 연도/월 헤더 배경 — 탄
-const COLOR_LABEL_BG = '#F6E6CB'     // 항목 라벨 배경 — 크림
-const COLOR_TAXED_BG = '#F0DCAF'     // 종합과세 연도 강조 배경 — 황토
-const COLOR_BORDER = '#A0937D'       // 셀 테두리 — 토프
+const COLOR_HEAD_BG = '#E7D4B5' // 연도/월 헤더 배경 — 탄
+const COLOR_LABEL_BG = '#F6E6CB' // 항목 라벨 배경 — 크림
+const COLOR_TAXED_BG = '#F0DCAF' // 종합과세 연도 강조 배경 — 황토
+const COLOR_BORDER = '#A0937D' // 셀 테두리 — 토프
 
 /** 엑셀 시트명 금지 문자 — : \ / ? * [ ] */
 const INVALID_SHEET_NAME_CHARS = /[:\\/?*[\]]/g
@@ -100,9 +96,7 @@ function toYearHeadText(
     const marks = [
         age !== null ? `${age}세` : '',
         // 종합과세 연도만 표기 — 기준 미만인 해는 원천징수로 끝나 5월에 낼 돈이 없다 (1년에 한 번 내는 돈이다)
-        summary?.taxed === true
-            ? `5월 종소세 ${formatKrw(summary.comprehensiveTax.totalDue)}원`
-            : '',
+        summary?.taxed === true ? `5월 종소세 ${formatKrw(summary.comprehensiveTax.totalDue)}원` : '',
         // 건보료는 전년도 소득으로 정해져 이 해에 매달 나간다 — 그래서 한 해 전 요약에서 가져온다
         prevSummary?.healthInsurance.applies === true
             ? `건보료 월 ${formatKrw(prevSummary.healthInsurance.monthlyPremium)}원(${year - 1}년 소득 기준)`
@@ -129,6 +123,7 @@ function toYearHeadText(
  * @param rows 이 시트에 기록할 행 정의 — 확정수익 구간이 있는 시트에만 확정수익 행이 포함된다
  * @param byYear 워크북 합산 연간 요약 — 종소세·건보료 표기의 출처
  * @param assetLabel 주력 종목 표기명 — 확정수익 이관 셀의 "→ 종목명" 문구에 쓴다
+ * @param inflationRatePercent 이 파일의 연 물가상승률 (%) — 실질가치 행 라벨에 붙인다
  */
 function buildSheetData(
     result: SimulationResult,
@@ -137,6 +132,7 @@ function buildSheetData(
     rows: GridRowDef[],
     byYear: Record<number, WorkbookYearSummary>,
     assetLabel: string,
+    inflationRatePercent: number,
 ): SheetData {
     const sheetData: SheetData = []
 
@@ -153,8 +149,13 @@ function buildSheetData(
         const headRow: Row = [
             {
                 value: toYearHeadText(
-                    year, birthYm, yearSummary, prevYearSummary,
-                    result.isaLimits, result.firstSellYm, result.depletedYm,
+                    year,
+                    birthYm,
+                    yearSummary,
+                    prevYearSummary,
+                    result.isaLimits,
+                    result.firstSellYm,
+                    result.depletedYm,
                 ),
                 fontWeight: 'bold',
                 fontSize: 12,
@@ -178,7 +179,7 @@ function buildSheetData(
         rows.forEach((rowDef) => {
             const dataRow: Row = [
                 {
-                    value: rowDef.label,
+                    value: toRowDisplayLabel(rowDef.label, inflationRatePercent),
                     fontWeight: 'bold',
                     align: 'left',
                     backgroundColor: COLOR_LABEL_BG,
@@ -214,7 +215,12 @@ function buildSheetData(
                             value: transferred ? monthly.growthTransfer : monthly.growthBalance,
                             type: Number,
                             format: transferred ? `${rowDef.excelFormat}" → ${assetLabel}"` : rowDef.excelFormat,
-                            ...(transferred ? { fontWeight: 'bold' as const, textColor: '#5C6B4A' } : {}),
+                            ...(transferred
+                                ? {
+                                      fontWeight: 'bold' as const,
+                                      textColor: '#5C6B4A',
+                                  }
+                                : {}),
                         }
                     }
 
@@ -228,7 +234,12 @@ function buildSheetData(
                         value: monthly[rowDef.field],
                         type: Number,
                         format: withdrawn ? `${rowDef.excelFormat}" (X)"` : rowDef.excelFormat,
-                        ...(withdrawn ? { textColor: '#9C8558', fontStyle: 'italic' as const } : {}),
+                        ...(withdrawn
+                            ? {
+                                  textColor: '#9C8558',
+                                  fontStyle: 'italic' as const,
+                              }
+                            : {}),
                     }
                 }),
             ]
@@ -262,10 +273,14 @@ export function buildWorkbookSheets(
     const years = buildYears(workbook.startYear, workbook.endYear)
 
     // 3) 워크북 전체를 한 번에 시뮬레이션 — 종합과세 판정이 모든 시트의 배당 합산 기준이므로 시트별로 따로 돌리면 안 된다
-    //    주가 변동률은 파일마다 다른 가정이라 화면과 동일하게 공통 상수 위에 덮어써서 넘긴다
+    //    주가 변동률·물가상승률은 파일마다 다른 가정이라 화면과 동일하게 공통 상수 위에 덮어써서 넘긴다
     const workbookResult = runWorkbookSimulation(
         workbook.tabs,
-        { ...constants, sharePriceDriftPercent: workbook.sharePriceDriftPercent },
+        {
+            ...constants,
+            sharePriceDriftPercent: workbook.sharePriceDriftPercent,
+            inflationRatePercent: workbook.inflationRatePercent,
+        },
         workbook.startYear,
         workbook.endYear,
     )
@@ -287,6 +302,7 @@ export function buildWorkbookSheets(
             //      (ISA 계좌에서는 판정 자체가 없어 이 요약이 전부 '해당 없음'으로 채워져 온다)
             workbookResult.byYear,
             meta.label,
+            workbook.inflationRatePercent,
         ),
         sheet: toSheetName(tab.name, index, usedNames),
         columns,

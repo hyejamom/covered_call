@@ -40,7 +40,6 @@ const LEDGER_OPTIONAL_ARRAYS = ['errands']
  * @returns 문제가 없으면 null, 있으면 사유 문자열
  */
 export function validateLedger(body) {
-
     // 1) 최상위 형태 확인
     if (typeof body !== 'object' || body === null) return '본문이 객체가 아닙니다'
 
@@ -81,7 +80,6 @@ async function ensureDataDir() {
  * @returns 저장된 스냅샷
  */
 export async function saveLedger(body) {
-
     // 1) 저장 시각을 서버 기준으로 찍는다 — 클라이언트 시계를 믿지 않는다
     const snapshot = {
         version: LEDGER_VERSION,

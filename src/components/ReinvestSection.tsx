@@ -19,7 +19,6 @@ interface ReinvestRuleRowProps {
 
 /** 재투자 구간 1행 — 시작 ~ 종료 기간과 재투자 여부 */
 function ReinvestRuleRow(props: ReinvestRuleRowProps) {
-
     // ┣━━━━━━━━━━━━━━━━ Handlers ━━━━━━━━━━━━━━━━━━━┫
 
     /** 연월 변경 — @param key 대상 필드 @param value 'YYYY-MM' 문자열 */
@@ -62,7 +61,9 @@ function ReinvestRuleRow(props: ReinvestRuleRowProps) {
             </select>
 
             {/* 4) 삭제 */}
-            <button className={'event_remove'} type={'button'} onClick={() => props.onRemove(props.rule.id)}>✕</button>
+            <button className={'event_remove'} type={'button'} onClick={() => props.onRemove(props.rule.id)}>
+                ✕
+            </button>
         </div>
     )
 }
@@ -82,7 +83,6 @@ interface ReinvestSectionProps {
  * 기간별로 배당을 재투자할지(O) 인출할지(X) 지정한다. 지정하지 않은 기간은 재투자한다.
  */
 function ReinvestSection(props: ReinvestSectionProps) {
-
     // ┣━━━━━━━━━━━━━━━━ Handlers ━━━━━━━━━━━━━━━━━━━┫
 
     /** 구간 추가 — 재투자 타입으로 빈 기간 1건 삽입 */
@@ -104,8 +104,8 @@ function ReinvestSection(props: ReinvestSectionProps) {
             <div className={'reinvest_head'}>
                 <h3 className={'reinvest_title'}>배당 재투자 구간</h3>
                 <span className={'reinvest_desc'}>
-                    지정하지 않은 기간은 재투자합니다 · 구간이 겹치면 나중에 시작한 구간이 우선 ·
-                    "재투자 X" 기간의 배당은 매수·잔액에 반영되지 않습니다 (월 정기 매수는 계속)
+                    지정하지 않은 기간은 재투자합니다 · 구간이 겹치면 나중에 시작한 구간이 우선 · "재투자 X" 기간의
+                    배당은 매수·잔액에 반영되지 않습니다 (월 정기 매수는 계속)
                 </span>
             </div>
 

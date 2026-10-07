@@ -46,7 +46,7 @@ function toInstallmentAmount(total: number, months: number, round: number): numb
     const base = Math.floor(total / months)
 
     // 2) 마지막 회차가 나머지를 전부 떠안아 합계가 원금과 정확히 일치한다
-    return round >= months ? total - (base * (months - 1)) : base
+    return round >= months ? total - base * (months - 1) : base
 }
 
 // ┣━━━━━━━━━━━━━━━━ API ━━━━━━━━━━━━━━━━━━━━━━━┫
@@ -115,9 +115,7 @@ export function toChargesOfMonth(costs: FixedCost[], ym: string): FixedCostCharg
  * @param ym 조회할 달 'YYYY-MM'
  */
 export function toIncomesOfMonth(incomes: FixedIncome[], ym: string): FixedIncome[] {
-    return incomes
-        .filter((income) => monthDiff(income.startYm, ym) >= 0)
-        .sort((a, b) => b.amount - a.amount)
+    return incomes.filter((income) => monthDiff(income.startYm, ym) >= 0).sort((a, b) => b.amount - a.amount)
 }
 
 /**
@@ -136,9 +134,7 @@ export function toErrandsOfCard(errands: CardErrand[], cardId: string, ym: strin
  * @param ym 조회할 달 'YYYY-MM'
  */
 export function toErrandTotalOfMonth(errands: CardErrand[], ym: string): number {
-    return errands
-        .filter((errand) => errand.ym === ym)
-        .reduce((sum, errand) => sum + errand.amount, 0)
+    return errands.filter((errand) => errand.ym === ym).reduce((sum, errand) => sum + errand.amount, 0)
 }
 
 /**
@@ -214,8 +210,7 @@ export function toCardUsedOfMonth(
                 .reduce((acc, charge) => acc + charge.amount, 0)
 
             // 2) 이 카드에 적어 둔 그 달 대납 — 엄마 용돈에서 빠지는 몫이라 내 지출이 아니다
-            const errand = toErrandsOfCard(errands, statement.cardId, ym)
-                .reduce((acc, item) => acc + item.amount, 0)
+            const errand = toErrandsOfCard(errands, statement.cardId, ym).reduce((acc, item) => acc + item.amount, 0)
 
             // 3) 총액을 잘못 적어 음수가 나오면 합계를 끌어내리지 않도록 0으로 막는다
             return sum + Math.max(0, statement.total - autoCharged - errand)
@@ -248,9 +243,7 @@ function compareEntries(a: LedgerEntry, b: LedgerEntry): number {
  */
 export function toMonthReport(data: LedgerData, ym: string): LedgerMonthReport {
     // 1) 그 달 직접 입력 항목 — 날짜 내림차순
-    const entries = data.entries
-        .filter((entry) => toYmOfDate(entry.date) === ym)
-        .sort(compareEntries)
+    const entries = data.entries.filter((entry) => toYmOfDate(entry.date) === ym).sort(compareEntries)
 
     // 2) 자동으로 잡히는 분 — 그 달 고정비·할부 / 고정 수입
     const charges = toChargesOfMonth(data.fixedCosts, ym)
@@ -266,24 +259,27 @@ export function toMonthReport(data: LedgerData, ym: string): LedgerMonthReport {
     const errandTotal = toErrandTotalOfMonth(errands, ym)
 
     // 4) 월 요약 — 직접 입력분을 수입/지출로 가른 뒤 생활비·총지출·저축 가능액을 세운다
-    const summary: LedgerMonthSummary = entries.reduce<LedgerMonthSummary>((acc, entry) => {
-        if (entry.kind === LedgerKind.INCOME) acc.income += entry.amount
-        else acc.expense += entry.amount
-        return acc
-    }, {
-        income: 0,
-        fixedIncome: fixedIncomeTotal,
-        expense: 0,
-        fixed: fixedTotal,
-        cardUsed,
-        errand: errandTotal,
-        living: 0,
-        total: 0,
-        net: 0,
-    })
+    const summary: LedgerMonthSummary = entries.reduce<LedgerMonthSummary>(
+        (acc, entry) => {
+            if (entry.kind === LedgerKind.INCOME) acc.income += entry.amount
+            else acc.expense += entry.amount
+            return acc
+        },
+        {
+            income: 0,
+            fixedIncome: fixedIncomeTotal,
+            expense: 0,
+            fixed: fixedTotal,
+            cardUsed,
+            errand: errandTotal,
+            living: 0,
+            total: 0,
+            net: 0,
+        },
+    )
     summary.living = toLivingCost(summary.cardUsed, summary.expense)
     summary.total = summary.fixed + summary.expense + summary.living
-    summary.net = (summary.income + summary.fixedIncome) - summary.total
+    summary.net = summary.income + summary.fixedIncome - summary.total
 
     // 5) 분류별 지출 — 고정비 · 직접 입력한 큰 지출 · 나머지를 뭉친 생활비를 한 통에 담는다
     const expenseByCategory: LedgerCategorySummary[] = Object.entries(

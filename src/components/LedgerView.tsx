@@ -37,18 +37,17 @@ const SYNC_LABEL: Record<LedgerSyncStatus, string> = {
  * 브라우저 로컬 저장소에는 같은 내용이 즉시 복사된다.
  */
 function LedgerView(props: LedgerViewProps) {
-
     // ┣━━━━━━━━━━━━━━━━ Props ━━━━━━━━━━━━━━━━━━━━━━┫
     // 아래 JSX 에서 ledger.xxx 로 자주 참조하므로 한 번만 꺼내 별칭을 둔다
     const ledger = props.ledger
 
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
-    const [date, setDate] = useState<string>(() => toDefaultDateOfYm(todayYm()))   // 입력 폼 날짜 'YYYY-MM-DD'
-    const [kind, setKind] = useState<LedgerKind>(LedgerKind.EXPENSE)               // 입력 폼 구분 — 기록 빈도가 높은 지출을 기본값으로
-    const [category, setCategory] = useState<string>(toDefaultCategory(LedgerKind.EXPENSE))   // 입력 폼 분류
-    const [memo, setMemo] = useState<string>('')                                  // 입력 폼 내용 메모
-    const [amount, setAmount] = useState<string>('')                              // 입력 폼 금액 — 빈 값 허용을 위해 문자열로 들고 있는다
-    const [editingId, setEditingId] = useState<string | null>(null)               // 수정 중인 항목 id. null이면 신규 입력 모드
+    const [date, setDate] = useState<string>(() => toDefaultDateOfYm(todayYm())) // 입력 폼 날짜 'YYYY-MM-DD'
+    const [kind, setKind] = useState<LedgerKind>(LedgerKind.EXPENSE) // 입력 폼 구분 — 기록 빈도가 높은 지출을 기본값으로
+    const [category, setCategory] = useState<string>(toDefaultCategory(LedgerKind.EXPENSE)) // 입력 폼 분류
+    const [memo, setMemo] = useState<string>('') // 입력 폼 내용 메모
+    const [amount, setAmount] = useState<string>('') // 입력 폼 금액 — 빈 값 허용을 위해 문자열로 들고 있는다
+    const [editingId, setEditingId] = useState<string | null>(null) // 수정 중인 항목 id. null이면 신규 입력 모드
 
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     // 1) 추가 가능 여부 — 금액이 0보다 커야 한다
@@ -59,11 +58,11 @@ function LedgerView(props: LedgerViewProps) {
     const netTone = ledger.summary.net < 0 ? 'ledger_summary_value_minus' : 'ledger_summary_value_plus'
 
     // 3) 서버 저장 상태 — 저장이 안 된 상태만 눈에 띄게 하고, 잘 저장된 동안은 조용히 둔다
-    const syncFailed = ledger.syncStatus === LedgerSyncStatus.OFFLINE
-        || ledger.syncStatus === LedgerSyncStatus.ERROR
+    const syncFailed = ledger.syncStatus === LedgerSyncStatus.OFFLINE || ledger.syncStatus === LedgerSyncStatus.ERROR
     const syncToneClass = syncFailed ? 'ledger_sync ledger_sync_failed' : 'ledger_sync'
-    const syncTitle = ledger.syncError
-        ?? (ledger.syncedAt === null
+    const syncTitle =
+        ledger.syncError ??
+        (ledger.syncedAt === null
             ? '서버 파일: server/data/ledger.json'
             : `마지막 저장 ${new Date(ledger.syncedAt).toLocaleString('ko-KR')} · server/data/ledger.json`)
 
@@ -199,9 +198,7 @@ function LedgerView(props: LedgerViewProps) {
                         </button>
                     )}
 
-                    <span className={'ledger_head_note'}>
-                        기록된 달 {ledger.recordedYms.length}개
-                    </span>
+                    <span className={'ledger_head_note'}>기록된 달 {ledger.recordedYms.length}개</span>
                     {/* 엑셀 내보내기 — 기간을 고르면 달마다 시트 1장으로 저장한다 */}
                     <LedgerExcelButton
                         data={{
@@ -238,7 +235,9 @@ function LedgerView(props: LedgerViewProps) {
                 </div>
                 <div
                     className={'ledger_summary_card'}
-                    title={'카드 명세서 총액에서 할부·고정비·엄마 심부름을 뺀 금액 — 이번 달 내 돈으로 카드에서 새로 쓴 돈'}
+                    title={
+                        '카드 명세서 총액에서 할부·고정비·엄마 심부름을 뺀 금액 — 이번 달 내 돈으로 카드에서 새로 쓴 돈'
+                    }
                 >
                     <span className={'ledger_summary_label'}>카드 사용</span>
                     <strong className={'ledger_summary_value ledger_summary_value_minus'}>
@@ -263,9 +262,7 @@ function LedgerView(props: LedgerViewProps) {
                 </div>
                 <div className={'ledger_summary_card'} title={'(수입 + 고정 수입) - 총지출'}>
                     <span className={'ledger_summary_label'}>저축 가능액</span>
-                    <strong className={`ledger_summary_value ${netTone}`}>
-                        {formatKrw(ledger.summary.net)}원
-                    </strong>
+                    <strong className={`ledger_summary_value ${netTone}`}>{formatKrw(ledger.summary.net)}원</strong>
                 </div>
             </section>
 
@@ -306,9 +303,11 @@ function LedgerView(props: LedgerViewProps) {
 
             {/* 6) 입출금 입력/수정 폼 — 날짜 / 구분 / 분류 / 내용 / 금액 */}
             <form
-                className={editingId === null
-                    ? 'ledger_form ledger_form_entry'
-                    : 'ledger_form ledger_form_entry ledger_form_editing'}
+                className={
+                    editingId === null
+                        ? 'ledger_form ledger_form_entry'
+                        : 'ledger_form ledger_form_entry ledger_form_editing'
+                }
                 onSubmit={handleSubmit}
             >
                 <input
@@ -325,7 +324,9 @@ function LedgerView(props: LedgerViewProps) {
                     title={'수입/지출 구분'}
                 >
                     {Object.values(LedgerKind).map((value) => (
-                        <option key={value} value={value}>{LEDGER_KIND_LABEL[value]}</option>
+                        <option key={value} value={value}>
+                            {LEDGER_KIND_LABEL[value]}
+                        </option>
                     ))}
                 </select>
                 <select
@@ -335,7 +336,9 @@ function LedgerView(props: LedgerViewProps) {
                     title={'분류'}
                 >
                     {LEDGER_CATEGORIES[kind].map((value) => (
-                        <option key={value} value={value}>{value}</option>
+                        <option key={value} value={value}>
+                            {value}
+                        </option>
                     ))}
                 </select>
                 <input
@@ -359,9 +362,13 @@ function LedgerView(props: LedgerViewProps) {
                     type={'submit'}
                     className={'ledger_submit'}
                     disabled={!submittable}
-                    title={submittable
-                        ? (editingId === null ? '항목을 추가합니다' : '수정 내용을 저장합니다')
-                        : '금액을 입력하세요'}
+                    title={
+                        submittable
+                            ? editingId === null
+                                ? '항목을 추가합니다'
+                                : '수정 내용을 저장합니다'
+                            : '금액을 입력하세요'
+                    }
                 >
                     {editingId === null ? '추가' : '수정 저장'}
                 </button>
@@ -392,20 +399,27 @@ function LedgerView(props: LedgerViewProps) {
                             >
                                 <span className={'ledger_row_date'}>{formatDateShort(entry.date)}</span>
                                 <span
-                                    className={entry.kind === LedgerKind.INCOME
-                                        ? 'ledger_row_kind ledger_row_kind_income'
-                                        : 'ledger_row_kind ledger_row_kind_expense'}
+                                    className={
+                                        entry.kind === LedgerKind.INCOME
+                                            ? 'ledger_row_kind ledger_row_kind_income'
+                                            : 'ledger_row_kind ledger_row_kind_expense'
+                                    }
                                 >
                                     {LEDGER_KIND_LABEL[entry.kind]}
                                 </span>
                                 <span className={'ledger_row_category'}>{entry.category}</span>
-                                <span className={'ledger_row_memo'} title={entry.memo}>{entry.memo}</span>
+                                <span className={'ledger_row_memo'} title={entry.memo}>
+                                    {entry.memo}
+                                </span>
                                 <span
-                                    className={entry.kind === LedgerKind.INCOME
-                                        ? 'ledger_row_amount ledger_row_amount_income'
-                                        : 'ledger_row_amount ledger_row_amount_expense'}
+                                    className={
+                                        entry.kind === LedgerKind.INCOME
+                                            ? 'ledger_row_amount ledger_row_amount_income'
+                                            : 'ledger_row_amount ledger_row_amount_expense'
+                                    }
                                 >
-                                    {entry.kind === LedgerKind.INCOME ? '+' : '−'}{formatKrw(entry.amount)}원
+                                    {entry.kind === LedgerKind.INCOME ? '+' : '−'}
+                                    {formatKrw(entry.amount)}원
                                 </span>
                                 <button
                                     type={'button'}
@@ -446,7 +460,9 @@ function LedgerView(props: LedgerViewProps) {
                                             {derived && (
                                                 <span
                                                     className={'ledger_category_auto'}
-                                                    title={'카드 사용액에서 아래 목록에 적어 둔 큰 지출을 뺀 나머지입니다'}
+                                                    title={
+                                                        '카드 사용액에서 아래 목록에 적어 둔 큰 지출을 뺀 나머지입니다'
+                                                    }
                                                 >
                                                     자동
                                                 </span>
@@ -456,9 +472,11 @@ function LedgerView(props: LedgerViewProps) {
                                     </div>
                                     <div className={'ledger_category_bar'}>
                                         <div
-                                            className={derived
-                                                ? 'ledger_category_bar_fill ledger_category_bar_fill_living'
-                                                : 'ledger_category_bar_fill'}
+                                            className={
+                                                derived
+                                                    ? 'ledger_category_bar_fill ledger_category_bar_fill_living'
+                                                    : 'ledger_category_bar_fill'
+                                            }
                                             style={{ width: `${(item.ratio * 100).toFixed(1)}%` }}
                                         />
                                     </div>

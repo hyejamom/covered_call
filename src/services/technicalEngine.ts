@@ -56,7 +56,7 @@ function toPercentileValue(sorted: number[], ratio: number): number {
     const lower = Math.floor(position)
     const upper = Math.ceil(position)
     if (lower === upper) return sorted[lower]
-    return sorted[lower] + ((sorted[upper] - sorted[lower]) * (position - lower))
+    return sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower)
 }
 
 // ┣━━━━━━━━━━━━━━━━ API ━━━━━━━━━━━━━━━━━━━━━━━┫
@@ -76,7 +76,7 @@ export function toTechnicalReport(history: PriceHistory): TechnicalReport {
     const samples: number[] = []
     for (let index = SMA_LONG_WEEKS - 1; index < values.length; index += 1) {
         const ma = toSma(values, SMA_LONG_WEEKS, index)
-        if (ma > 0) samples.push((values[index] / ma) - 1)
+        if (ma > 0) samples.push(values[index] / ma - 1)
     }
     samples.sort((a, b) => a - b)
 
@@ -86,10 +86,8 @@ export function toTechnicalReport(history: PriceHistory): TechnicalReport {
     const sellLevel = smaLong * (1 + sellDisparity)
 
     // 4) 오늘의 이격도와 구간 판정
-    const disparity = smaLong > 0 ? (price / smaLong) - 1 : 0
-    const zone = price <= buyLevel ? PriceZone.CHEAP
-        : price >= sellLevel ? PriceZone.EXPENSIVE
-            : PriceZone.FAIR
+    const disparity = smaLong > 0 ? price / smaLong - 1 : 0
+    const zone = price <= buyLevel ? PriceZone.CHEAP : price >= sellLevel ? PriceZone.EXPENSIVE : PriceZone.FAIR
 
     // 5) 최근 1년(52주) 중 매수 구간이 몇 주였는지 — 이 문이 얼마나 자주 열리는지 보여 준다
     let buyWeeksLastYear = 0

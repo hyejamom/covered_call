@@ -43,6 +43,11 @@ export interface Workbook {
      * 화면에서는 보수 · 중립 · 낙관 프리셋(assetConstants 의 DRIFT_PRESETS)으로 눌러 바꾼다.
      */
     sharePriceDriftPercent: number
+    /**
+     * 연 물가상승률 (%) — 그리드의 "배당금(실질가치)" 행에서 미래 배당을 기준연도 화폐가치로 되돌릴 때 쓰는 할인율.
+     * 표시 전용 값이라 매수·재투자 계산에는 관여하지 않는다. 기본값은 INFLATION_POLICY.RATE_PERCENT.
+     */
+    inflationRatePercent: number
     tabs: SheetTab[]
 }
 

@@ -12,7 +12,6 @@ interface AppTabBarProps {
  * 1 계산기 · 2 가계부 · 3 분석 순서로 놓고, 지금 보고 있는 탭만 밝게 띄운다.
  */
 function AppTabBar(props: AppTabBarProps) {
-
     return (
         <div className={'app_tab_bar'} role={'tablist'} aria-label={'화면 전환'}>
             {APP_VIEW_ORDER.map((value) => {

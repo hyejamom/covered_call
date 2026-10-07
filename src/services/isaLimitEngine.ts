@@ -37,11 +37,7 @@ export const NO_ISA_LIMIT_STATUS: IsaLimitStatus = {
  * @param input 대상 기간을 다 돌고 난 계좌 누계
  * @param constants 납입한도 정책 상수
  */
-export function evaluateIsaLimits(
-    input: IsaLimitInput,
-    constants: SimulationConstants,
-): IsaLimitStatus {
-
+export function evaluateIsaLimits(input: IsaLimitInput, constants: SimulationConstants): IsaLimitStatus {
     // 1) 총 납입한도 초과분 — 넘지 않았으면 0
     const overTotalLimit = Math.max(0, input.contributionTotal - constants.isaTotalLimitKrw)
 

@@ -10,17 +10,17 @@
  */
 :root {
     /* ── 컨셉 4색 + 흰색 ── */
-    --clay: #a0937d;    /* 토프 — 강조 · 선 */
-    --sand: #e7d4b5;    /* 탄 — 헤더 · 라벨 띠 */
-    --cream: #f6e6cb;   /* 크림 — 화면 바탕 */
-    --sage: #b6c7aa;    /* 세이지 — 수입 · 긍정 */
-    --white: #ffffff;   /* 흰색 — 카드 · 패널 본판 */
+    --clay: #a0937d; /* 토프 — 강조 · 선 */
+    --sand: #e7d4b5; /* 탄 — 헤더 · 라벨 띠 */
+    --cream: #f6e6cb; /* 크림 — 화면 바탕 */
+    --sage: #b6c7aa; /* 세이지 — 수입 · 긍정 */
+    --white: #ffffff; /* 흰색 — 카드 · 패널 본판 */
 
     /* ── 면 · 선 ── */
     --bg-page: var(--cream);
     --bg-panel: var(--white);
-    --bg-panel-soft: #fbf4e8;   /* 흰 본판 위 보조 면 — 행 hover · 라벨 열 · 그라데이션 시작점 */
-    --bg-cell: #fdf9f1;         /* 입력칸 · 데이터 셀 — 흰 패널과 구분되는 아주 옅은 크림 */
+    --bg-panel-soft: #fbf4e8; /* 흰 본판 위 보조 면 — 행 hover · 라벨 열 · 그라데이션 시작점 */
+    --bg-cell: #fdf9f1; /* 입력칸 · 데이터 셀 — 흰 패널과 구분되는 아주 옅은 크림 */
     --line: #dcc9a9;
     --line-soft: #ece0c9;
 
@@ -93,10 +93,15 @@
     box-sizing: border-box;
     background:
         radial-gradient(1100px 520px at 12% -10%, #fbf1dc 0%, transparent 62%),
-        radial-gradient(900px 460px at 92% 4%, #e4ecd9 0%, transparent 58%),
-        var(--bg-page);
+        radial-gradient(900px 460px at 92% 4%, #e4ecd9 0%, transparent 58%), var(--bg-page);
     color: var(--text-base);
-    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
+    font-family:
+        'Pretendard',
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        'Malgun Gothic',
+        sans-serif;
     -webkit-font-smoothing: antialiased;
 }
 
@@ -164,7 +169,10 @@
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
 }
 
 .save_button_action:hover:not(:disabled) {
@@ -227,7 +235,9 @@
     font-weight: 600;
     line-height: 1;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
 }
 
 .app_tab:hover {
@@ -295,7 +305,10 @@
     font-family: inherit;
     text-align: left;
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
 .calc_asset_tab:hover {
@@ -394,7 +407,9 @@
     background: linear-gradient(160deg, var(--bg-panel-soft) 0%, var(--bg-panel) 100%);
     box-shadow: 0 18px 40px rgba(122, 98, 64, 0.12);
     overflow: hidden;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease;
 }
 
 .info_card:hover {
@@ -410,10 +425,18 @@
     height: 4px;
 }
 
-.info_card_blue::before { background: linear-gradient(90deg, var(--accent), #c7b79a); }
-.info_card_green::before { background: linear-gradient(90deg, var(--positive), var(--sage)); }
-.info_card_amber::before { background: linear-gradient(90deg, var(--warning), #e3c177); }
-.info_card_violet::before { background: linear-gradient(90deg, var(--rose), #c0a8b6); }
+.info_card_blue::before {
+    background: linear-gradient(90deg, var(--accent), #c7b79a);
+}
+.info_card_green::before {
+    background: linear-gradient(90deg, var(--positive), var(--sage));
+}
+.info_card_amber::before {
+    background: linear-gradient(90deg, var(--warning), #e3c177);
+}
+.info_card_violet::before {
+    background: linear-gradient(90deg, var(--rose), #c0a8b6);
+}
 
 .info_card_label {
     font-size: 17px;
@@ -443,10 +466,18 @@
     color: var(--text-mute);
 }
 
-.info_card_blue .info_card_value { color: var(--accent-ink); }
-.info_card_green .info_card_value { color: var(--positive-ink); }
-.info_card_amber .info_card_value { color: var(--warning-ink); }
-.info_card_violet .info_card_value { color: var(--rose-ink); }
+.info_card_blue .info_card_value {
+    color: var(--accent-ink);
+}
+.info_card_green .info_card_value {
+    color: var(--positive-ink);
+}
+.info_card_amber .info_card_value {
+    color: var(--warning-ink);
+}
+.info_card_violet .info_card_value {
+    color: var(--rose-ink);
+}
 
 .info_card_trend {
     font-size: 15px;
@@ -454,9 +485,15 @@
     font-variant-numeric: tabular-nums;
 }
 
-.info_card_trend_up { color: var(--danger-ink); }     /* 상승 — 국내 관행상 적색(테라코타) */
-.info_card_trend_down { color: var(--positive-ink); }  /* 하락 — 상승과 대비되는 세이지 */
-.info_card_trend_flat { color: var(--text-mute); }
+.info_card_trend_up {
+    color: var(--danger-ink);
+} /* 상승 — 국내 관행상 적색(테라코타) */
+.info_card_trend_down {
+    color: var(--positive-ink);
+} /* 하락 — 상승과 대비되는 세이지 */
+.info_card_trend_flat {
+    color: var(--text-mute);
+}
 
 .info_card_trend_error {
     color: var(--danger-ink);
@@ -474,8 +511,12 @@
 }
 
 @keyframes skeleton_shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 /* ══════════ 시뮬레이션 필터 (sim_filter) ══════════ */
@@ -591,12 +632,11 @@
     text-align: right;
 }
 
-/* ── 조건 요약 ── */
+/* ── 조건 요약 + 기본 설정 박스 — 왼쪽 항목 이름 / 오른쪽 값·입력칸을 한 줄씩 쌓는다 ── */
 .sim_summary {
     display: flex;
-    flex-wrap: wrap;
-    gap: 22px;
-    padding: 12px 16px;
+    flex-direction: column;
+    padding: 4px 20px;
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-md);
     background: var(--accent-tint);
@@ -605,10 +645,91 @@
     font-variant-numeric: tabular-nums;
 }
 
-.sim_summary strong {
-    margin-left: 6px;
-    color: var(--text-strong);
+/* 한 줄 — 고정폭 라벨 + 나머지 폭의 내용. 줄 사이는 옅은 선으로만 가른다 */
+.sim_row {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 18px;
+    min-height: 50px;
+    padding: 7px 0;
+    border-top: 1px solid var(--line-soft);
+}
+
+.sim_row:first-child {
+    border-top: 0;
+}
+
+/* 요약(읽기 전용) 묶음과 입력 설정 묶음의 경계 — 선을 한 단계 진하게 */
+.sim_row_section {
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+}
+
+/* 왼쪽 항목 이름 — 앞에 작은 점을 찍어 행의 시작을 또렷하게 한다 */
+.sim_row_label {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 14px;
     font-weight: 700;
+    color: var(--text-base);
+    white-space: nowrap;
+}
+
+.sim_row_label::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+/* 오른쪽 내용 — 값·입력칸·배지가 가로로 늘어서고, 폭이 모자라면 아랫줄로 접힌다 */
+.sim_row_body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+/* 읽기 전용 값 */
+.sim_row_value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-strong);
+    letter-spacing: -0.01em;
+}
+
+/* 값 옆 보조 설명 — "파일 합산 기준" 같은 한마디 */
+.sim_row_hint {
+    font-size: 13px;
+    color: var(--text-mute);
+}
+
+/* 실행 불가 경고 행 — "세금"이 아니라 "이 계획이 성립하는가"를 가르는 항목. 점·라벨·값을 모두 테라코타로 */
+.sim_row_warn .sim_row_label {
+    color: var(--danger-ink);
+}
+
+.sim_row_warn .sim_row_label::before {
+    background: var(--danger);
+}
+
+.sim_row_warn .sim_row_value {
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--danger-tint);
+    color: var(--danger-ink);
+}
+
+/* 생년월 피커 — 행 안에서 고정폭 */
+.sim_row .ym_picker {
+    flex: 0 0 190px;
+    width: 190px;
 }
 
 /* 원금 헐기 시작 배지 — 아직 고갈은 아니지만 방향이 꺾이는 지점이라 황토(주의)로 세운다 */
@@ -649,20 +770,6 @@
 
 /* 인출 이벤트 안내 문구 */
 .event_hint_withdraw {
-    color: var(--danger-ink);
-}
-
-/* 실행 불가 경고 — ISA 납입한도처럼 "세금"이 아니라 "이 계획이 성립하는가"를 가르는 항목 */
-.sim_summary_warn {
-    padding: 0 10px;
-    border-radius: 999px;
-    background: var(--danger-tint);
-    color: var(--danger-ink);
-    font-weight: 700;
-    cursor: help;
-}
-
-.sim_summary_warn strong {
     color: var(--danger-ink);
 }
 
@@ -779,7 +886,10 @@
     color: var(--text-mute);
     font-size: 15px;
     cursor: pointer;
-    transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+    transition:
+        background 0.14s ease,
+        color 0.14s ease,
+        border-color 0.14s ease;
 }
 
 .event_remove:hover {
@@ -799,7 +909,9 @@
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.14s ease, border-color 0.14s ease;
+    transition:
+        background 0.14s ease,
+        border-color 0.14s ease;
 }
 
 .event_add:hover {
@@ -957,7 +1069,7 @@
 }
 
 .workbook_group {
-    position: relative;   /* 드래그 삽입선(::before/::after)의 기준 박스 */
+    position: relative; /* 드래그 삽입선(::before/::after)의 기준 박스 */
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -1060,7 +1172,9 @@
     font-size: 13px;
     line-height: 1;
     cursor: pointer;
-    transition: background 0.14s ease, border-color 0.14s ease;
+    transition:
+        background 0.14s ease,
+        border-color 0.14s ease;
 }
 
 .workbook_group_duplicate:hover {
@@ -1082,7 +1196,9 @@
     font-size: 17px;
     line-height: 1;
     cursor: pointer;
-    transition: background 0.14s ease, color 0.14s ease;
+    transition:
+        background 0.14s ease,
+        color 0.14s ease;
 }
 
 .workbook_group_remove:hover {
@@ -1105,7 +1221,9 @@
     font-size: 14px;
     line-height: 1;
     cursor: pointer;
-    transition: background 0.14s ease, border-color 0.14s ease;
+    transition:
+        background 0.14s ease,
+        border-color 0.14s ease;
 }
 
 .excel_download_compact:hover:not(:disabled) {
@@ -1130,7 +1248,10 @@
     font-size: 21px;
     line-height: 1;
     cursor: pointer;
-    transition: border-color 0.14s ease, color 0.14s ease, background 0.14s ease;
+    transition:
+        border-color 0.14s ease,
+        color 0.14s ease,
+        background 0.14s ease;
 }
 
 .workbook_add:hover {
@@ -1149,7 +1270,7 @@
 }
 
 .sheet_tab {
-    position: relative;   /* 드래그 삽입선(::before/::after)의 기준 박스 */
+    position: relative; /* 드래그 삽입선(::before/::after)의 기준 박스 */
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1162,7 +1283,10 @@
     font-weight: 600;
     cursor: pointer;
     user-select: none;
-    transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+    transition:
+        background 0.14s ease,
+        color 0.14s ease,
+        border-color 0.14s ease;
 }
 
 .sheet_tab:hover {
@@ -1219,7 +1343,10 @@
     line-height: 1;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.14s ease, background 0.14s ease, color 0.14s ease;
+    transition:
+        opacity 0.14s ease,
+        background 0.14s ease,
+        color 0.14s ease;
 }
 
 .sheet_tab:hover .sheet_tab_remove {
@@ -1245,7 +1372,10 @@
     font-size: 19px;
     line-height: 1;
     cursor: pointer;
-    transition: border-color 0.14s ease, color 0.14s ease, background 0.14s ease;
+    transition:
+        border-color 0.14s ease,
+        color 0.14s ease,
+        background 0.14s ease;
 }
 
 .sheet_tab_add:hover {
@@ -1314,7 +1444,9 @@
     font-weight: 700;
     white-space: nowrap;
     cursor: pointer;
-    transition: background 0.14s ease, border-color 0.14s ease;
+    transition:
+        background 0.14s ease,
+        border-color 0.14s ease;
 }
 
 .excel_download_button:hover:not(:disabled) {
@@ -1638,18 +1770,6 @@
     cursor: help;
 }
 
-/* ══════════ 생년월 입력 (birth_field) ══════════ */
-/* ── 대상 기간 (파일 단위 설정) ── */
-.range_field {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border: 1px solid var(--line-soft);
-    border-radius: var(--radius-md);
-    background: var(--accent-tint);
-}
-
 .range_label {
     flex: 0 0 auto;
     font-size: 14px;
@@ -1690,41 +1810,6 @@
     text-align: right;
 }
 
-/* 변동률을 넣었을 때의 결과 미리보기 — 기간 끝 주가 배수와 총수익률 */
-.drift_preview {
-    font-size: 13px;
-    color: var(--text-mute);
-    white-space: nowrap;
-}
-
-/* 기초지수 장기 수익률을 넘는 가정 — 틀린 입력은 아니므로 막지 않고 색으로만 짚어 준다 */
-.drift_preview_warn {
-    color: var(--danger-ink);
-    font-weight: 700;
-    white-space: normal;
-}
-
-/* 주가 변동률 칸 — 미리보기 문구가 길어 가로 한 줄로는 안 되므로 이 칸만 세로로 쌓는다 */
-.range_field_drift {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-}
-
-/* 입력줄 — 라벨 + 입력칸 + 프리셋 버튼. 폭이 모자라면 버튼 묶음이 아랫줄로 접힌다 */
-.drift_head {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-    row-gap: 8px;
-}
-
-/* 세로로 쌓인 칸이라 미리보기 문구는 줄바꿈을 허용한다 */
-.range_field_drift .drift_preview {
-    white-space: normal;
-}
-
 /* 시나리오 프리셋 버튼 묶음 — 보수 · 중립 · 낙관 */
 .drift_preset_row {
     display: flex;
@@ -1745,7 +1830,10 @@
     background: var(--bg-cell);
     color: var(--text-base);
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    transition:
+        background 0.15s,
+        border-color 0.15s,
+        color 0.15s;
 }
 
 .drift_preset_btn:hover {
@@ -1786,36 +1874,13 @@
     white-space: nowrap;
 }
 
-.range_hint {
-    font-size: 13px;
-    color: var(--text-mute);
-}
-
-.birth_field {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border: 1px solid var(--line-soft);
-    border-radius: var(--radius-md);
-    background: var(--rose-tint);
-}
-
-.birth_label {
-    flex: 0 0 auto;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text-base);
-}
-
-.birth_field .ym_picker {
-    flex: 0 0 190px;
-    width: 190px;
-}
-
-.birth_hint {
-    font-size: 13px;
-    color: var(--text-mute);
+/* 조건 요약 박스 — 좁은 화면에서는 라벨을 위, 내용을 아래로 */
+@media (max-width: 720px) {
+    .sim_row {
+        grid-template-columns: 1fr;
+        row-gap: 8px;
+        padding: 10px 0;
+    }
 }
 
 /* ══════════ 반응형 ══════════ */
@@ -1927,7 +1992,7 @@
     flex-wrap: wrap;
     gap: 12px;
     position: sticky;
-    top: 10px
+    top: 10px;
 }
 
 .ledger_month {
@@ -1960,7 +2025,9 @@
     font-size: 20px;
     line-height: 1;
     cursor: pointer;
-    transition: border-color 0.14s ease, color 0.14s ease;
+    transition:
+        border-color 0.14s ease,
+        color 0.14s ease;
 }
 
 .ledger_month_nav:hover {
@@ -2130,7 +2197,9 @@
     font-size: 20px;
     line-height: 1;
     cursor: pointer;
-    transition: background 0.14s ease, color 0.14s ease;
+    transition:
+        background 0.14s ease,
+        color 0.14s ease;
 }
 
 .ledger_modal_close:hover {
@@ -2425,7 +2494,10 @@
     white-space: nowrap;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+    transition:
+        opacity 0.14s ease,
+        border-color 0.14s ease,
+        color 0.14s ease;
     min-width: 40px;
 }
 
@@ -2467,7 +2539,10 @@
     line-height: 1;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.14s ease, background 0.14s ease, color 0.14s ease;
+    transition:
+        opacity 0.14s ease,
+        background 0.14s ease,
+        color 0.14s ease;
 }
 
 .ledger_fixed_row:hover .ledger_fixed_edit,
@@ -2498,7 +2573,9 @@
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: border-color 0.14s ease, color 0.14s ease;
+    transition:
+        border-color 0.14s ease,
+        color 0.14s ease;
 }
 
 .ledger_cancel:hover {
@@ -2670,7 +2747,9 @@
     font-size: 17px;
     line-height: 1;
     cursor: pointer;
-    transition: background 0.14s ease, color 0.14s ease;
+    transition:
+        background 0.14s ease,
+        color 0.14s ease;
 }
 
 .ledger_card_remove:hover {
@@ -2741,7 +2820,10 @@
     font-size: 11px;
     line-height: 1.5;
     cursor: pointer;
-    transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+    transition:
+        background 0.14s ease,
+        color 0.14s ease,
+        border-color 0.14s ease;
 }
 
 .ledger_errand_toggle:hover {
@@ -2798,7 +2880,9 @@
     font-size: 15px;
     line-height: 1;
     cursor: pointer;
-    transition: background 0.14s ease, color 0.14s ease;
+    transition:
+        background 0.14s ease,
+        color 0.14s ease;
 }
 
 .ledger_errand_remove:hover {
@@ -2882,7 +2966,10 @@
     line-height: 1;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.14s ease, background 0.14s ease, color 0.14s ease;
+    transition:
+        opacity 0.14s ease,
+        background 0.14s ease,
+        color 0.14s ease;
 }
 
 .ledger_row:hover .ledger_row_edit,
@@ -2974,7 +3061,10 @@
     line-height: 1;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.14s ease, background 0.14s ease, color 0.14s ease;
+    transition:
+        opacity 0.14s ease,
+        background 0.14s ease,
+        color 0.14s ease;
 }
 
 .ledger_row:hover .ledger_row_remove {
@@ -3375,9 +3465,6 @@
         padding-right: 24px;
     }
 }
-
-
-
 
 @media (max-width: 1100px) {
     /* 분류별 지출 패널을 목록 아래로 내린다 */

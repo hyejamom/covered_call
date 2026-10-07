@@ -13,7 +13,6 @@ interface CalcAssetTabBarProps {
  * 파일·시트·이벤트도 탭마다 따로 보관되므로 탭을 옮겨도 서로의 계획이 섞이지 않는다.
  */
 function CalcAssetTabBar(props: CalcAssetTabBarProps) {
-
     return (
         <div className={'calc_asset_tab_bar'} role={'tablist'} aria-label={'계산기 종목 전환'}>
             {CALC_ASSET_ORDER.map((value) => {

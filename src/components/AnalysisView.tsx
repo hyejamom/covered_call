@@ -44,7 +44,6 @@ interface SymbolVerdictCardProps {
 
 /** 종목 카드 한 장 — 조회 상태를 스스로 들고 있다가 값이 확정되면 판정 본문으로 넘긴다 */
 function SymbolVerdictCard(props: SymbolVerdictCardProps) {
-
     // ┣━━━━━━━━━━━━━━━━ CustomHooks ━━━━━━━━━━━━━━━━┫
     const technical = useTechnical(props.symbol)
 
@@ -97,9 +96,7 @@ function VerdictCardHead(props: VerdictCardHeadProps) {
                 <span className={'verdict_symbol'}>{ANALYSIS_SYMBOL_META[props.symbol].ticker}</span>
                 <span className={'verdict_symbol_name'}>{ANALYSIS_SYMBOL_META[props.symbol].name}</span>
             </span>
-            {props.asOf !== undefined && (
-                <span className={'verdict_asof'}>기준 {props.asOf} · 종가</span>
-            )}
+            {props.asOf !== undefined && <span className={'verdict_asof'}>기준 {props.asOf} · 종가</span>}
         </header>
     )
 }
@@ -111,7 +108,6 @@ interface PriceVerdictProps {
 
 /** 판정 본문 — 값이 확정된 뒤에만 그려지므로 null 검사 없이 쓴다 */
 function PriceVerdict(props: PriceVerdictProps) {
-
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     const report = props.report
     const symbol = report.symbol as AnalysisSymbol
@@ -123,23 +119,24 @@ function PriceVerdict(props: PriceVerdictProps) {
 
     // 1-1) 현재가 라벨은 점과 같은 지점에 붙인다. 가운데 정렬로 두면 점과 라벨이 따로 놀아 값이 어긋나 보인다.
     //      다만 양 끝에서는 translateX(-50%) 가 카드 밖으로 삐져나가므로 그때만 끝에 붙인다.
-    const nowLabelStyle = markerPercent < 8
-        ? { left: 0 }
-        : markerPercent > 92
-            ? { right: 0 }
-            : { left: `${markerPercent}%`, transform: 'translateX(-50%)' }
+    const nowLabelStyle =
+        markerPercent < 8
+            ? { left: 0 }
+            : markerPercent > 92
+              ? { right: 0 }
+              : { left: `${markerPercent}%`, transform: 'translateX(-50%)' }
 
     // 2) 한 줄 결론 — 지금 사야 하는지, 기다려야 하는지
-    const action = report.zone === PriceZone.CHEAP
-        ? `${BASELINE_LABEL}까지 눌렸습니다 — 모아 둔 현금을 넣는 자리`
-        : report.zone === PriceZone.EXPENSIVE
-            ? '과열 구간입니다 — 신규 매수를 멈추고 덜어낼지 판단할 자리'
-            : `${(report.gapToBuy * 100).toFixed(1)}% 더 빠져 ${toMoney(report.buyLevel, report.currency)}에 닿으면 매수 — 그때까지 현금 보유`
+    const action =
+        report.zone === PriceZone.CHEAP
+            ? `${BASELINE_LABEL}까지 눌렸습니다 — 모아 둔 현금을 넣는 자리`
+            : report.zone === PriceZone.EXPENSIVE
+              ? '과열 구간입니다 — 신규 매수를 멈추고 덜어낼지 판단할 자리'
+              : `${(report.gapToBuy * 100).toFixed(1)}% 더 빠져 ${toMoney(report.buyLevel, report.currency)}에 닿으면 매수 — 그때까지 현금 보유`
 
     return (
         // 판정 카드 한 장 — 머리띠 / 현재가 / 위치 막대 / 기준가 2열 / 근거 순으로 한 상자 안에 쌓는다
         <section className={'verdict_card'}>
-
             {/* 1) 머리띠 — 종목과 기준일 */}
             <VerdictCardHead symbol={symbol} asOf={report.asOf} />
 
@@ -199,14 +196,14 @@ function PriceVerdict(props: PriceVerdictProps) {
             <footer className={'verdict_card_foot'}>
                 <p className={'verdict_basis_text'}>
                     매수선은 <b>{BASELINE_LABEL} 그 자체</b>, 과열선은 상장 이후 이격도 {SELL_ZONE_LABEL}에 해당하는
-                    {BASELINE_LABEL} +{(report.sellDisparity * 100).toFixed(1)}% 입니다. 지금은 {BASELINE_LABEL}보다
-                    {' '}<b>{(report.disparity * 100).toFixed(1)}%</b> 위, 최근 1년 종가 범위의
-                    {' '}<b>{(report.yearRatio * 100).toFixed(0)}% 지점</b>입니다.
+                    {BASELINE_LABEL} +{(report.sellDisparity * 100).toFixed(1)}% 입니다. 지금은 {BASELINE_LABEL}보다{' '}
+                    <b>{(report.disparity * 100).toFixed(1)}%</b> 위, 최근 1년 종가 범위의{' '}
+                    <b>{(report.yearRatio * 100).toFixed(0)}% 지점</b>입니다.
                 </p>
                 {/* 기다리는 전략이라 "이 문이 얼마나 드물게 열리는지"와 대기 비용을 반드시 같이 알려 준다 */}
                 <p className={'verdict_basis_text'}>
-                    최근 1년 중 매수 구간이 열린 주는 <b>{report.buyWeeksLastYear}주</b>뿐이었습니다.
-                    {' '}{ANALYSIS_SYMBOL_META[symbol].waitingNote}
+                    최근 1년 중 매수 구간이 열린 주는 <b>{report.buyWeeksLastYear}주</b>뿐이었습니다.{' '}
+                    {ANALYSIS_SYMBOL_META[symbol].waitingNote}
                 </p>
             </footer>
         </section>

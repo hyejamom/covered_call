@@ -1,4 +1,3 @@
-import { INFLATION_POLICY } from './simulationDefaults'
 import type { MonthlyResult } from '../types/simulation'
 
 // ══════════ 그리드 공용 상수 ══════════
@@ -40,8 +39,18 @@ export const SELECTABLE_YEARS: number[] = buildYears(MIN_SELECTABLE_YEAR, MAX_SE
 
 /** 2) 가로 13칸 중 1~12칸에 들어갈 월 라벨 (하드코딩) */
 export const MONTH_LABELS: string[] = [
-    '1월', '2월', '3월', '4월', '5월', '6월',
-    '7월', '8월', '9월', '10월', '11월', '12월',
+    '1월',
+    '2월',
+    '3월',
+    '4월',
+    '5월',
+    '6월',
+    '7월',
+    '8월',
+    '9월',
+    '10월',
+    '11월',
+    '12월',
 ]
 
 /** 3) 1~12월 인덱스 목록 — 셀 렌더 루프용 */
@@ -61,8 +70,12 @@ export const RowLabel = {
      */
     NET_CONTRIBUTION: '순금액(납입−배당)',
     BALANCE: '잔액(예수금)',
-    /** 세후 배당을 기준연도 화폐가치로 환산한 금액 — 라벨의 물가상승률은 INFLATION_POLICY.RATE_PERCENT 를 따라간다 */
-    DIVIDEND_REAL: `배당금(물가상승률${INFLATION_POLICY.RATE_PERCENT}%)`,
+    /**
+     * 세후 배당을 기준연도 화폐가치로 환산한 금액.
+     * 물가상승률이 파일마다 다른 값이라 라벨 자체에는 숫자를 넣지 않고,
+     * 화면·엑셀에 찍을 때 toRowDisplayLabel 이 그 파일의 값을 붙인다.
+     */
+    DIVIDEND_REAL: '배당금(실질가치)',
     /** 일반 계좌 — 지급 시점에 원천징수를 떼고 계좌에 들어온 금액 */
     DIVIDEND: '배당금(세후)',
     /**
@@ -90,6 +103,16 @@ export function isNominalDividendRow(label: RowLabel): boolean {
     return label === RowLabel.DIVIDEND || label === RowLabel.DIVIDEND_ISA
 }
 
+/**
+ * 화면·엑셀에 찍을 행 라벨 — 실질가치 행에만 그 파일의 물가상승률을 덧붙인다
+ * (RowLabel 값은 셀 판정의 키라 숫자를 넣어 두면 파일마다 라벨이 달라져 비교가 깨진다)
+ * @param label 행 라벨 @param inflationRatePercent 그 파일의 연 물가상승률 (%)
+ */
+export function toRowDisplayLabel(label: RowLabel, inflationRatePercent: number): string {
+    if (label !== RowLabel.DIVIDEND_REAL) return label
+    return `배당금(물가상승률${inflationRatePercent}%)`
+}
+
 /** 그리드 1개 행 정의 — 라벨 / 월별 결과에서 뽑을 필드 / 엑셀 표시 형식 */
 export interface GridRowDef {
     label: RowLabel
@@ -99,8 +122,13 @@ export interface GridRowDef {
      */
     field?: keyof Pick<
         MonthlyResult,
-        'balance' | 'dividendNet' | 'dividendReal' | 'growthBalance' | 'netContribution'
-        | 'withdrawPaid' | 'accountRemaining'
+        | 'balance'
+        | 'dividendNet'
+        | 'dividendReal'
+        | 'growthBalance'
+        | 'netContribution'
+        | 'withdrawPaid'
+        | 'accountRemaining'
     >
     excelFormat?: string
 }
@@ -113,7 +141,11 @@ export const GRID_ROWS: GridRowDef[] = [
     { label: RowLabel.CUMULATIVE },
     { label: RowLabel.BALANCE, field: 'balance', excelFormat: '#,##0' },
     // 실질가치 행은 명목 배당 바로 위에 두어 "이 금액이 지금 돈으로는 얼마인지"를 나란히 읽게 한다
-    { label: RowLabel.DIVIDEND_REAL, field: 'dividendReal', excelFormat: '#,##0' },
+    {
+        label: RowLabel.DIVIDEND_REAL,
+        field: 'dividendReal',
+        excelFormat: '#,##0',
+    },
     { label: RowLabel.DIVIDEND, field: 'dividendNet', excelFormat: '#,##0' },
 ]
 
@@ -125,10 +157,22 @@ export const GRID_ROWS: GridRowDef[] = [
 export const ISA_GRID_ROWS: GridRowDef[] = [
     { label: RowLabel.CUMULATIVE },
     // 누적금액 바로 아래에 두어 "이 중 내 돈은 얼마인지"를 나란히 읽게 한다
-    { label: RowLabel.NET_CONTRIBUTION, field: 'netContribution', excelFormat: '#,##0' },
+    {
+        label: RowLabel.NET_CONTRIBUTION,
+        field: 'netContribution',
+        excelFormat: '#,##0',
+    },
     { label: RowLabel.BALANCE, field: 'balance', excelFormat: '#,##0' },
-    { label: RowLabel.DIVIDEND_REAL, field: 'dividendReal', excelFormat: '#,##0' },
-    { label: RowLabel.DIVIDEND_ISA, field: 'dividendNet', excelFormat: '#,##0' },
+    {
+        label: RowLabel.DIVIDEND_REAL,
+        field: 'dividendReal',
+        excelFormat: '#,##0',
+    },
+    {
+        label: RowLabel.DIVIDEND_ISA,
+        field: 'dividendNet',
+        excelFormat: '#,##0',
+    },
 ]
 
 /**

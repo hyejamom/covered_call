@@ -19,13 +19,12 @@ interface LedgerExcelButtonProps {
  * 종료 월은 이번 달을 넘길 수 없다. 아직 오지 않은 달은 고정비만 찍혀 나와 오해를 부르기 때문이다.
  */
 function LedgerExcelButton(props: LedgerExcelButtonProps) {
-
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
-    const [open, setOpen] = useState<boolean>(false)                     // 기간 선택 모달 노출 여부
-    const [startYm, setStartYm] = useState<string>(() => shiftYm(todayYm(), -11))   // 시작 월 — 기본 최근 12개월
-    const [endYm, setEndYm] = useState<string>(() => todayYm())          // 종료 월 — 기본 이번 달
-    const [downloading, setDownloading] = useState<boolean>(false)       // 파일 생성 중 여부
-    const [error, setError] = useState<string | null>(null)              // 생성 실패 메시지
+    const [open, setOpen] = useState<boolean>(false) // 기간 선택 모달 노출 여부
+    const [startYm, setStartYm] = useState<string>(() => shiftYm(todayYm(), -11)) // 시작 월 — 기본 최근 12개월
+    const [endYm, setEndYm] = useState<string>(() => todayYm()) // 종료 월 — 기본 이번 달
+    const [downloading, setDownloading] = useState<boolean>(false) // 파일 생성 중 여부
+    const [error, setError] = useState<string | null>(null) // 생성 실패 메시지
 
     // ┣━━━━━━━━━━━━━━━━ Effects ━━━━━━━━━━━━━━━━━━━━┫
 
@@ -205,7 +204,6 @@ interface MonthSelectProps {
  * 상한과 같은 해를 고르면 월 목록이 상한 월까지만 나오므로, 미래 달을 고를 방법이 없다.
  */
 function MonthSelect(props: MonthSelectProps) {
-
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     // 1) 'YYYY-MM' 분해
     const parts = props.value.split('-')
@@ -247,7 +245,9 @@ function MonthSelect(props: MonthSelectProps) {
                 onChange={(event) => handleYearChange(event.target.value)}
             >
                 {years.map((item) => (
-                    <option key={item} value={String(item)}>{item}년</option>
+                    <option key={item} value={String(item)}>
+                        {item}년
+                    </option>
                 ))}
             </select>
             <select
@@ -257,7 +257,9 @@ function MonthSelect(props: MonthSelectProps) {
                 onChange={(event) => handleMonthChange(event.target.value)}
             >
                 {months.map((item) => (
-                    <option key={item} value={String(item).padStart(2, '0')}>{item}월</option>
+                    <option key={item} value={String(item).padStart(2, '0')}>
+                        {item}월
+                    </option>
                 ))}
             </select>
         </div>

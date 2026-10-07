@@ -55,10 +55,9 @@ interface WorkbookGroupProps {
  * 상단에 파일명(더블클릭 편집 / 드래그로 파일 순서 변경) + 단독 다운로드, 하단에 그 파일에 들어갈 시트 탭 목록을 둔다.
  */
 function WorkbookGroup(props: WorkbookGroupProps) {
-
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
-    const [dragging, setDragging] = useState<boolean>(false)             // 이 그룹을 끌고 있는 중 (반투명 처리 + 자기 위 드롭 표시 억제용)
-    const [dropEdge, setDropEdge] = useState<DropEdge | null>(null)      // 삽입선을 그릴 위치. null이면 이 그룹은 드롭 대상이 아님
+    const [dragging, setDragging] = useState<boolean>(false) // 이 그룹을 끌고 있는 중 (반투명 처리 + 자기 위 드롭 표시 억제용)
+    const [dropEdge, setDropEdge] = useState<DropEdge | null>(null) // 삽입선을 그릴 위치. null이면 이 그룹은 드롭 대상이 아님
 
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     const isEditing = props.editingWorkbookId === props.workbook.id

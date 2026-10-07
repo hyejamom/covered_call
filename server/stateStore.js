@@ -31,7 +31,6 @@ export const STORAGE_VERSION = 3
  * @returns 문제가 없으면 null, 있으면 사유 문자열
  */
 function validateAssetSlice(label, slice) {
-
     // 1) 최상위 형태 확인
     if (typeof slice !== 'object' || slice === null) return `${label} 칸이 객체가 아닙니다`
     if (!Array.isArray(slice.workbooks) || slice.workbooks.length === 0) {
@@ -67,7 +66,6 @@ function validateAssetSlice(label, slice) {
  * @returns 문제가 없으면 null, 있으면 사유 문자열
  */
 export function validateSnapshot(body) {
-
     // 1) 최상위 형태 확인
     if (typeof body !== 'object' || body === null) return '본문이 객체가 아닙니다'
 
@@ -100,7 +98,6 @@ async function ensureDataDir() {
  * @returns 저장된 스냅샷
  */
 export async function saveSnapshot(assets) {
-
     // 1) 저장 시각을 서버 기준으로 찍는다 — 클라이언트 시계를 믿지 않는다
     const snapshot = {
         version: STORAGE_VERSION,
@@ -142,7 +139,11 @@ export async function loadSnapshot() {
 /** 저장된 스냅샷 삭제 — 파일을 빈 상태로 되돌린다 (검증에 걸려 다음 조회 때 '이력 없음'으로 읽힌다) */
 export async function clearSnapshot() {
     await ensureDataDir()
-    await writeFile(STATE_FILE, JSON.stringify({ version: STORAGE_VERSION, savedAt: null, assets: {} }, null, 2), 'utf8')
+    await writeFile(
+        STATE_FILE,
+        JSON.stringify({ version: STORAGE_VERSION, savedAt: null, assets: {} }, null, 2),
+        'utf8',
+    )
 }
 
 /** 스냅샷 파일 경로 — 기동 로그 표기용 */

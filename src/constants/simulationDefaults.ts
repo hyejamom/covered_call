@@ -50,13 +50,18 @@ export const HEALTH_INSURANCE_POLICY = {
 } as const
 
 /**
- * 물가 정책 — 고정 상수
+ * 물가 정책 — 파일(워크북) 단위 설정
  * 미래에 받을 배당금이 "지금 돈으로는 얼마인지"를 함께 보여주기 위한 값이며, 매수·재투자 계산에는 전혀 관여하지 않는다.
- * BASE_YEAR 를 바꾸면 gridConstants 의 RowLabel.DIVIDEND_REAL 라벨 문구도 자동으로 따라간다.
+ * 연 물가상승률은 파일마다 따로 잡는다 (Workbook.inflationRatePercent). 여기 RATE_PERCENT 는
+ * 새 파일을 만들 때와 물가상승률 칸이 없던 옛 저장본을 복원할 때 채워 넣는 기본값이다.
+ * 기준연도는 바꿀 일이 없어 고정 상수로 둔다.
  */
 export const INFLATION_POLICY = {
-    /** 연 물가상승률 (%) — 한국은행 물가안정목표 2% 보다 한 단계 보수적으로 잡은 값 */
+    /** 기본 연 물가상승률 (%) — 한국은행 물가안정목표 2% 보다 한 단계 보수적으로 잡은 값 */
     RATE_PERCENT: 3,
+    /** 입력 가능한 연 물가상승률 범위 (%) — 디플레이션 가정도 넣어 볼 수 있게 아래쪽을 조금 열어 둔다 */
+    MIN_PERCENT: -5,
+    MAX_PERCENT: 15,
     /** 실질가치 환산 기준연도 — 이 해 1월의 화폐가치를 1로 본다 */
     BASE_YEAR: 2026,
 } as const
@@ -135,9 +140,7 @@ export function resolveConstants(
         sharePriceNative: sharePrice ?? meta.fallback.sharePrice,
         monthlyDividendNative: monthlyDividend ?? meta.fallback.monthlyDividend,
         // 원화 종목은 이미 원 단위 시세라 환산할 것이 없다 — 환율 1 로 두면 아래 계산식이 그대로 성립한다
-        exchangeRate: meta.currency === AssetCurrency.KRW
-            ? 1
-            : exchangeRate ?? FALLBACK_EXCHANGE_RATE,
+        exchangeRate: meta.currency === AssetCurrency.KRW ? 1 : (exchangeRate ?? FALLBACK_EXCHANGE_RATE),
         // 주가 변동률은 파일(워크북)마다 잡는 값이라 여기서는 종목 기본값을 두고 호출측에서 덮어쓴다
         sharePriceDriftPercent: meta.defaultDriftPercent,
         // ISA 계좌 안의 배당은 뗄 세금이 없어 지급액 전액이 그대로 들어온다
@@ -146,6 +149,7 @@ export function resolveConstants(
         comprehensiveRatePercent: TAX_POLICY.COMPREHENSIVE_RATE_PERCENT,
         healthRatePercent: HEALTH_INSURANCE_POLICY.RATE_PERCENT,
         healthIncomeThresholdKrw: HEALTH_INSURANCE_POLICY.INCOME_THRESHOLD_KRW,
+        // 물가상승률도 주가 변동률처럼 파일마다 잡는 값이라 기본값만 두고 호출측에서 덮어쓴다
         inflationRatePercent: INFLATION_POLICY.RATE_PERCENT,
         inflationBaseYear: INFLATION_POLICY.BASE_YEAR,
         isaAnnualLimitKrw: ISA_POLICY.ANNUAL_LIMIT_KRW,
@@ -161,16 +165,13 @@ export function resolveConstants(
  * @param endYear 대상 기간 종료 연도
  */
 export function createNewEventDefault(startYear: number, endYear: number): Omit<InvestEvent, 'id'> {
-
     // 1) 오늘 연월이 대상 기간 안에 드는지 판정
     const now = new Date()
     const nowYear = now.getFullYear()
     const inRange = nowYear >= startYear && nowYear <= endYear
 
     // 2) 기간 안이면 이번 달, 밖이면 기간 첫 해 1월
-    const startYm = inRange
-        ? `${nowYear}-${String(now.getMonth() + 1).padStart(2, '0')}`
-        : `${startYear}-01`
+    const startYm = inRange ? `${nowYear}-${String(now.getMonth() + 1).padStart(2, '0')}` : `${startYear}-01`
 
     return {
         type: EventType.ONE_TIME,

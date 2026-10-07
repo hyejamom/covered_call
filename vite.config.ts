@@ -1,5 +1,10 @@
+import { setDefaultAutoSelectFamily } from 'node:net'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+
+// 개발 서버 프록시(/api/yahoo, /api/nasdaq)도 이 Node 프로세스에서 외부로 붙는다.
+// server/index.js 와 같은 이유로 IPv6/IPv4 자동 선택을 끈다 — 자세한 설명은 그쪽 주석 참고.
+setDefaultAutoSelectFamily(false)
 
 // https://vite.dev/config/
 export default defineConfig({

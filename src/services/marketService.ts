@@ -1,9 +1,4 @@
-import {
-    CALC_ASSET_META,
-    type CalcAsset,
-    DividendBasis,
-    DividendSource,
-} from '../constants/assetConstants'
+import { CALC_ASSET_META, type CalcAsset, DividendBasis, DividendSource } from '../constants/assetConstants'
 import { Currency, type DividendEvent, type PriceHistory, type WeeklyClose } from '../types/technical'
 
 // ══════════ 통신용 DTO ══════════
@@ -11,22 +6,24 @@ import { Currency, type DividendEvent, type PriceHistory, type WeeklyClose } fro
 /** Yahoo Finance chart 응답 (이력 조회) — 필요한 필드만 선언 */
 interface YahooHistoryResponseDto {
     chart: {
-        result: {
-            meta: {
-                regularMarketPrice: number
-                /** 시세 통화 — 한국 종목은 KRW 로 온다 */
-                currency?: string
-                /** 거래소 시간대 — 'America/New_York', 'Asia/Seoul' */
-                exchangeTimezoneName?: string
-                /** 실제로 내려온 봉 단위 — '1wk' 가 아니면 지표 계산의 전제가 깨진다 */
-                dataGranularity?: string
-            }
-            /** 봉별 시작 시각 UNIX 초 */
-            timestamp: number[] | null
-            indicators: { quote: { close: (number | null)[] | null }[] | null } | null
-            /** 배당 이벤트 — 키가 타임스탬프인 객체로 온다 */
-            events?: { dividends?: Record<string, { amount: number, date: number }> }
-        }[] | null
+        result:
+            | {
+                  meta: {
+                      regularMarketPrice: number
+                      /** 시세 통화 — 한국 종목은 KRW 로 온다 */
+                      currency?: string
+                      /** 거래소 시간대 — 'America/New_York', 'Asia/Seoul' */
+                      exchangeTimezoneName?: string
+                      /** 실제로 내려온 봉 단위 — '1wk' 가 아니면 지표 계산의 전제가 깨진다 */
+                      dataGranularity?: string
+                  }
+                  /** 봉별 시작 시각 UNIX 초 */
+                  timestamp: number[] | null
+                  indicators: { quote: { close: (number | null)[] | null }[] | null } | null
+                  /** 배당 이벤트 — 키가 타임스탬프인 객체로 온다 */
+                  events?: { dividends?: Record<string, { amount: number; date: number }> }
+              }[]
+            | null
         error: unknown
     }
 }
@@ -34,15 +31,17 @@ interface YahooHistoryResponseDto {
 /** Yahoo Finance chart 응답 — 필요한 필드만 선언 */
 interface YahooChartResponseDto {
     chart: {
-        result: {
-            meta: {
-                symbol: string
-                currency: string
-                regularMarketPrice: number
-                chartPreviousClose: number
-                regularMarketTime: number
-            }
-        }[] | null
+        result:
+            | {
+                  meta: {
+                      symbol: string
+                      currency: string
+                      regularMarketPrice: number
+                      chartPreviousClose: number
+                      regularMarketTime: number
+                  }
+              }[]
+            | null
         error: unknown
     }
 }
@@ -184,9 +183,7 @@ export async function fetchQuote(asset: CalcAsset): Promise<QuoteInfo> {
 
     // 1-1) 전일 종가 대비 등락액/등락률 계산
     const changeAmount = dtoMeta.regularMarketPrice - dtoMeta.chartPreviousClose
-    const changeRate = dtoMeta.chartPreviousClose === 0
-        ? 0
-        : (changeAmount / dtoMeta.chartPreviousClose) * 100
+    const changeRate = dtoMeta.chartPreviousClose === 0 ? 0 : (changeAmount / dtoMeta.chartPreviousClose) * 100
 
     return {
         price: dtoMeta.regularMarketPrice,

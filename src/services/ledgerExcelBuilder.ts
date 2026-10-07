@@ -14,16 +14,24 @@ import type { WorkbookSheet } from './excelSheetBuilder'
 // ┣━━━━━━━━━━━━━━━━ 스타일 상수 ━━━━━━━━━━━━━━━┫
 // 화면과 같은 컨셉 팔레트(A0937D · E7D4B5 · F6E6CB · B6C7AA)
 
-const COLOR_SECTION_BG = '#E7D4B5'   // 구획 제목 줄 — 탄
-const COLOR_HEAD_BG = '#F6E6CB'      // 표 머리글 — 크림
-const COLOR_TOTAL_BG = '#B6C7AA'     // 저축 가능액 등 결론 줄 — 세이지
-const COLOR_BORDER = '#A0937D'       // 셀 테두리 — 토프
+const COLOR_SECTION_BG = '#E7D4B5' // 구획 제목 줄 — 탄
+const COLOR_HEAD_BG = '#F6E6CB' // 표 머리글 — 크림
+const COLOR_TOTAL_BG = '#B6C7AA' // 저축 가능액 등 결론 줄 — 세이지
+const COLOR_BORDER = '#A0937D' // 셀 테두리 — 토프
 
 /** 원 단위 정수 서식 — 천단위 콤마 */
 const MONEY_FORMAT = '#,##0'
 
 /** 열 폭 — 7열 구성 (항목 / 분류 / 카드·메모 / 값1 / 값2 / 값3 / 값4) */
-const COLUMNS = [{ width: 18 }, { width: 20 }, { width: 24 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }]
+const COLUMNS = [
+    { width: 18 },
+    { width: 20 },
+    { width: 24 },
+    { width: 16 },
+    { width: 16 },
+    { width: 16 },
+    { width: 16 },
+]
 
 // ┣━━━━━━━━━━━━━━━━ 셀 유틸 ━━━━━━━━━━━━━━━━━━━┫
 
@@ -192,11 +200,7 @@ function buildMonthSheet(report: LedgerMonthReport): SheetData {
         rows.push([sectionCell('분류별 지출')])
         rows.push([headCell('분류'), headCell('금액', 'right'), headCell('비중', 'right')])
         report.expenseByCategory.forEach((item) => {
-            rows.push([
-                textCell(item.category),
-                moneyCell(item.amount),
-                { ...moneyCell(item.ratio), format: '0.0%' },
-            ])
+            rows.push([textCell(item.category), moneyCell(item.amount), { ...moneyCell(item.ratio), format: '0.0%' }])
         })
     }
 

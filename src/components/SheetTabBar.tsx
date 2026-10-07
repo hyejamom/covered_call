@@ -18,12 +18,7 @@ interface SheetTabBarProps {
     onCancelRename: () => void
     onRemove: (tabId: string) => void
     /** 시트 이동 — @param targetTabId null이면 이 파일 맨 뒤, @param before 대상 탭 앞에 넣을지 여부 */
-    onMove: (
-        source: SheetTabDragPayload,
-        targetWorkbookId: string,
-        targetTabId: string | null,
-        before: boolean,
-    ) => void
+    onMove: (source: SheetTabDragPayload, targetWorkbookId: string, targetTabId: string | null, before: boolean) => void
 }
 
 /**
@@ -31,18 +26,17 @@ interface SheetTabBarProps {
  * 탭 클릭으로 선택, 더블클릭으로 이름 변경, + 버튼으로 탭 추가, 드래그로 순서 변경 및 다른 파일로 이동.
  */
 function SheetTabBar(props: SheetTabBarProps) {
-
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
-    const [draggingTabId, setDraggingTabId] = useState<string | null>(null)      // 이 탭 바에서 끌기 시작한 탭 (반투명 처리용)
-    const [dropTabId, setDropTabId] = useState<string | null>(null)              // 삽입선을 그릴 대상 탭. null이면 탭 위가 아님
-    const [dropBefore, setDropBefore] = useState<boolean>(true)                  // 대상 탭의 앞(왼쪽)에 넣을지 여부
-    const [dropAtEnd, setDropAtEnd] = useState<boolean>(false)                   // 탭 바 빈 영역에 놓는 중 — 맨 뒤로 이동
+    const [draggingTabId, setDraggingTabId] = useState<string | null>(null) // 이 탭 바에서 끌기 시작한 탭 (반투명 처리용)
+    const [dropTabId, setDropTabId] = useState<string | null>(null) // 삽입선을 그릴 대상 탭. null이면 탭 위가 아님
+    const [dropBefore, setDropBefore] = useState<boolean>(true) // 대상 탭의 앞(왼쪽)에 넣을지 여부
+    const [dropAtEnd, setDropAtEnd] = useState<boolean>(false) // 탭 바 빈 영역에 놓는 중 — 맨 뒤로 이동
 
     // ┣━━━━━━━━━━━━━━━━ Handlers ━━━━━━━━━━━━━━━━━━━┫
 
     /** 탭 삭제 버튼 클릭 — @param event 클릭 이벤트, @param tabId 삭제할 탭 id */
     const handleRemoveClick = (event: MouseEvent<HTMLButtonElement>, tabId: string) => {
-        event.stopPropagation()   // 탭 선택으로 전파되지 않도록 차단
+        event.stopPropagation() // 탭 선택으로 전파되지 않도록 차단
         props.onRemove(tabId)
     }
 
@@ -71,7 +65,7 @@ function SheetTabBar(props: SheetTabBarProps) {
         // 1) 시트 탭이 아닌 드래그(파일 그룹 등)는 여기서 받지 않는다
         if (!event.dataTransfer.types.includes(DragMime.SHEET_TAB)) return
         event.preventDefault()
-        event.stopPropagation()   // 탭 바 빈 영역 처리로 전파되지 않도록 차단
+        event.stopPropagation() // 탭 바 빈 영역 처리로 전파되지 않도록 차단
         event.dataTransfer.dropEffect = 'move'
 
         // 2) 포인터가 탭의 좌/우 어느 쪽에 있는지로 삽입 위치를 정한다

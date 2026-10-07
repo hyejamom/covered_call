@@ -89,8 +89,7 @@ export function toRangeSummary(
         // 3-2) 자동으로 잡히는 분 — 그 달 고정 수입 / 고정비·할부
         const charges = toChargesOfMonth(fixedCosts, ym)
         const fixedExpense = charges.reduce((sum, charge) => sum + charge.amount, 0)
-        const fixedIncome = toIncomesOfMonth(fixedIncomes, ym)
-            .reduce((sum, income) => sum + income.amount, 0)
+        const fixedIncome = toIncomesOfMonth(fixedIncomes, ym).reduce((sum, income) => sum + income.amount, 0)
 
         // 3-3) 생활비 — 카드로 쓴 돈 중 직접 입력한 큰 지출로 설명되지 않는 나머지
         //      카드 사용액에서 대납(엄마 심부름)은 이미 빠져 있다 — 엄마 용돈으로 이미 한 번 잡힌 돈이다

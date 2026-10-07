@@ -27,7 +27,11 @@ function formatSavedAt(value: string): string {
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return ''
     return date.toLocaleString('ko-KR', {
-        month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
     })
 }
 
@@ -51,12 +55,11 @@ interface SaveButtonProps {
  * 저장 시 브라우저 로컬 저장소에 먼저 기록하고, 이어서 저장 서버(/api/state)로 올린다.
  */
 function SaveButton(props: SaveButtonProps) {
-
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
-    const [target, setTarget] = useState<SaveTarget>(SaveTarget.NONE)   // 마지막 저장이 어디까지 갔는지
-    const [saving, setSaving] = useState<boolean>(false)                // 서버 전송 중 여부
-    const [flashing, setFlashing] = useState<boolean>(false)            // 저장 직후 결과 문구 노출 여부
-    const [error, setError] = useState<string | null>(null)             // 저장 실패 메시지
+    const [target, setTarget] = useState<SaveTarget>(SaveTarget.NONE) // 마지막 저장이 어디까지 갔는지
+    const [saving, setSaving] = useState<boolean>(false) // 서버 전송 중 여부
+    const [flashing, setFlashing] = useState<boolean>(false) // 저장 직후 결과 문구 노출 여부
+    const [error, setError] = useState<string | null>(null) // 저장 실패 메시지
 
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     // 1) 현재 상태 지문 — 마지막 저장 지문과 다르면 미저장 변경이 있는 것 (종목 두 칸을 통째로 비교한다)
@@ -134,7 +137,9 @@ function SaveButton(props: SaveButtonProps) {
             <span className={'save_button_meta'}>
                 {saving && <span className={'save_button_meta_saving'}>저장 중…</span>}
                 {!saving && error !== null && (
-                    <span className={'save_button_meta_error'} title={error}>{error}</span>
+                    <span className={'save_button_meta_error'} title={error}>
+                        {error}
+                    </span>
                 )}
                 {!saving && error === null && flashing && (
                     <span className={'save_button_meta_done'}>{targetLabel}에 저장됨</span>

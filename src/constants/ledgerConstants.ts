@@ -6,8 +6,20 @@ import { LedgerKind } from '../types/ledger'
 export const LEDGER_CATEGORIES: Record<LedgerKind, string[]> = {
     [LedgerKind.INCOME]: ['급여', '상여', '배당', '금융수익', '부수입', '기타수입'],
     [LedgerKind.EXPENSE]: [
-        '식비', '주거/관리', '교통', '통신', '의료', '보험',
-        '교육', '문화/여가', '여행', '쇼핑', '경조사', '저축/투자', '혜자', '기타지출',
+        '식비',
+        '주거/관리',
+        '교통',
+        '통신',
+        '의료',
+        '보험',
+        '교육',
+        '문화/여가',
+        '여행',
+        '쇼핑',
+        '경조사',
+        '저축/투자',
+        '혜자',
+        '기타지출',
     ],
 }
 
@@ -57,7 +69,7 @@ export function shiftYm(ym: string, delta: number): string {
     if (!Number.isFinite(year) || !Number.isFinite(month)) return ym
 
     // 1) 0-based 월로 바꿔 계산한 뒤 다시 1-based 로 되돌린다 (연도 넘김을 Date 없이 처리)
-    const zeroBased = (year * 12) + (month - 1) + delta
+    const zeroBased = year * 12 + (month - 1) + delta
     return `${Math.floor(zeroBased / 12)}-${String((zeroBased % 12) + 1).padStart(2, '0')}`
 }
 
@@ -69,8 +81,8 @@ export function shiftYm(ym: string, delta: number): string {
 export function monthDiff(fromYm: string, toYm: string): number {
     const from = fromYm.split('-')
     const to = toYm.split('-')
-    const fromMonths = (Number(from[0]) * 12) + Number(from[1])
-    const toMonths = (Number(to[0]) * 12) + Number(to[1])
+    const fromMonths = Number(from[0]) * 12 + Number(from[1])
+    const toMonths = Number(to[0]) * 12 + Number(to[1])
     if (!Number.isFinite(fromMonths) || !Number.isFinite(toMonths)) return 0
 
     return toMonths - fromMonths

@@ -6,7 +6,7 @@ import {
     isCalcAsset,
 } from '../constants/assetConstants'
 import { DEFAULT_END_YEAR, DEFAULT_START_YEAR, clampYear } from '../constants/gridConstants'
-import { GROWTH_POLICY } from '../constants/simulationDefaults'
+import { GROWTH_POLICY, INFLATION_POLICY } from '../constants/simulationDefaults'
 import { EventType, type InvestEvent, InvestTarget } from '../types/simulation'
 import type { Workbook } from '../types/workbook'
 
@@ -108,14 +108,17 @@ export function toStateSignature(assets: AssetStateMap): string {
  */
 export function createEmptyAssetState(asset: CalcAsset, workbookId: string, tabId: string): AssetStateDto {
     return {
-        workbooks: [{
-            id: workbookId,
-            name: '파일1',
-            startYear: DEFAULT_START_YEAR,
-            endYear: DEFAULT_END_YEAR,
-            sharePriceDriftPercent: CALC_ASSET_META[asset].defaultDriftPercent,
-            tabs: [{ id: tabId, name: '시트1', birthYm: '', events: [] }],
-        }],
+        workbooks: [
+            {
+                id: workbookId,
+                name: '파일1',
+                startYear: DEFAULT_START_YEAR,
+                endYear: DEFAULT_END_YEAR,
+                sharePriceDriftPercent: CALC_ASSET_META[asset].defaultDriftPercent,
+                inflationRatePercent: INFLATION_POLICY.RATE_PERCENT,
+                tabs: [{ id: tabId, name: '시트1', birthYm: '', events: [] }],
+            },
+        ],
         activeTabId: tabId,
     }
 }
@@ -130,16 +133,17 @@ export function createEmptyAssetState(asset: CalcAsset, workbookId: string, tabI
 function isRestorableWorkbooks(workbooks: unknown): workbooks is Workbook[] {
     if (!Array.isArray(workbooks) || workbooks.length === 0) return false
 
-    return workbooks.every((workbook) => (
-        typeof workbook?.id === 'string'
-        && typeof workbook?.name === 'string'
-        && Array.isArray(workbook?.tabs)
-        && workbook.tabs.length > 0
-        && workbook.tabs.every((tab: unknown) => {
-            const candidate = tab as Partial<Workbook['tabs'][number]>
-            return typeof candidate?.id === 'string' && Array.isArray(candidate?.events)
-        })
-    ))
+    return workbooks.every(
+        (workbook) =>
+            typeof workbook?.id === 'string' &&
+            typeof workbook?.name === 'string' &&
+            Array.isArray(workbook?.tabs) &&
+            workbook.tabs.length > 0 &&
+            workbook.tabs.every((tab: unknown) => {
+                const candidate = tab as Partial<Workbook['tabs'][number]>
+                return typeof candidate?.id === 'string' && Array.isArray(candidate?.events)
+            }),
+    )
 }
 
 /**
@@ -148,7 +152,6 @@ function isRestorableWorkbooks(workbooks: unknown): workbooks is Workbook[] {
  * @param parsed JSON.parse 결과
  */
 function isRestorable(parsed: unknown): parsed is SavedStateDto | LegacyStateDto {
-
     // 1) 객체 형태 + 버전 확인 — 구버전은 마이그레이션 대상이라 통과시키고, 미래 버전만 막는다
     if (typeof parsed !== 'object' || parsed === null) return false
     const candidate = parsed as Partial<SavedStateDto & LegacyStateDto>
@@ -159,12 +162,15 @@ function isRestorable(parsed: unknown): parsed is SavedStateDto | LegacyStateDto
     //    이름이 바뀐 종목 키(LEGACY_CALC_ASSET_KEY)도 아는 칸으로 쳐 준다 — 여기서 막으면 저장본이 통째로 버려진다.
     if (typeof candidate.assets === 'object' && candidate.assets !== null) {
         const slices = Object.entries(candidate.assets)
-        return slices.length > 0
-            && slices.every(([assetKey, slice]) => (
-                (isCalcAsset(assetKey) || LEGACY_CALC_ASSET_KEY[assetKey] !== undefined)
-                && isRestorableWorkbooks((slice as Partial<AssetStateDto>)?.workbooks)
-                && typeof (slice as Partial<AssetStateDto>)?.activeTabId === 'string'
-            ))
+        return (
+            slices.length > 0 &&
+            slices.every(
+                ([assetKey, slice]) =>
+                    (isCalcAsset(assetKey) || LEGACY_CALC_ASSET_KEY[assetKey] !== undefined) &&
+                    isRestorableWorkbooks((slice as Partial<AssetStateDto>)?.workbooks) &&
+                    typeof (slice as Partial<AssetStateDto>)?.activeTabId === 'string',
+            )
+        )
     }
 
     // 3) v2 이하 — 최상위에 워크북 목록이 놓여 있던 형태
@@ -181,7 +187,6 @@ function isRestorable(parsed: unknown): parsed is SavedStateDto | LegacyStateDto
  * @param fromVersion 스냅샷이 저장될 때의 구조 버전
  */
 function migrateWorkbooks(workbooks: Workbook[], fromVersion: number): Workbook[] {
-
     // 1) 이미 v2 이상이면 손대지 않는다 — 사용자가 일부러 10% 로 되돌린 행을 다시 깎으면 안 된다
     if (fromVersion >= 2) return workbooks
 
@@ -192,11 +197,14 @@ function migrateWorkbooks(workbooks: Workbook[], fromVersion: number): Workbook[
         ...workbook,
         tabs: workbook.tabs.map((tab) => ({
             ...tab,
-            events: tab.events.map((event) => (
+            events: tab.events.map((event) =>
                 event.priceGrowthPercent === LEGACY_GROWTH_RATE_PERCENT
-                    ? { ...event, priceGrowthPercent: GROWTH_POLICY.DEFAULT_PRICE_GROWTH_PERCENT }
-                    : event
-            )),
+                    ? {
+                          ...event,
+                          priceGrowthPercent: GROWTH_POLICY.DEFAULT_PRICE_GROWTH_PERCENT,
+                      }
+                    : event,
+            ),
         })),
     }))
 }
@@ -230,7 +238,6 @@ export function normalizeWorkbooks(workbooks: Workbook[], fromVersion: number = 
  * @param asset 이 워크북이 속한 종목 탭
  */
 function foldGrowthEvents(workbooks: Workbook[], asset: CalcAsset): Workbook[] {
-
     // 0) 확정수익 자산을 쓰는 종목이면 손대지 않는다
     if (CALC_ASSET_META[asset].supportsGrowthAsset) return workbooks
 
@@ -239,10 +246,13 @@ function foldGrowthEvents(workbooks: Workbook[], asset: CalcAsset): Workbook[] {
         tabs: workbook.tabs.map((tab) => ({
             ...tab,
             events: tab.events.map((event) => {
-
                 // 1) 월 정기매수(확정수익) → 월 정기 매수. 기간·금액은 그대로 두어 계획이 달라지지 않게 한다
                 if (event.type === EventType.RECURRING_GROWTH) {
-                    return { ...event, type: EventType.RECURRING, target: InvestTarget.MAIN }
+                    return {
+                        ...event,
+                        type: EventType.RECURRING,
+                        target: InvestTarget.MAIN,
+                    }
                 }
 
                 // 2) 대상이 확정수익인 일회성 투입 → 그 달 바로 주력 종목 매수. 이관 연월은 의미를 잃어 비운다
@@ -263,9 +273,7 @@ function foldGrowthEvents(workbooks: Workbook[], asset: CalcAsset): Workbook[] {
 function normalizeShape(workbooks: Workbook[]): Workbook[] {
     return workbooks.map((workbook) => {
         // 1) 대상 기간 — 기간 기능 도입 이전 저장본에는 없으므로 기본값(2026~2050)으로 채운다
-        const startYear = clampYear(
-            typeof workbook.startYear === 'number' ? workbook.startYear : DEFAULT_START_YEAR,
-        )
+        const startYear = clampYear(typeof workbook.startYear === 'number' ? workbook.startYear : DEFAULT_START_YEAR)
         const rawEndYear = typeof workbook.endYear === 'number' ? workbook.endYear : DEFAULT_END_YEAR
 
         return {
@@ -275,9 +283,16 @@ function normalizeShape(workbooks: Workbook[]): Workbook[] {
             endYear: Math.max(startYear, clampYear(rawEndYear)),
             // 2-1) 주가 변동률 — 도입 이전 저장본은 주가 고정(0)으로 돌던 데이터이므로 그 동작을 그대로 유지한다.
             //      새 파일 기본값을 쓰면 사용자가 이미 짜 둔 계획의 숫자가 조용히 달라진다.
-            sharePriceDriftPercent: typeof workbook.sharePriceDriftPercent === 'number'
-                ? workbook.sharePriceDriftPercent
-                : LEGACY_DRIFT_PERCENT,
+            sharePriceDriftPercent:
+                typeof workbook.sharePriceDriftPercent === 'number'
+                    ? workbook.sharePriceDriftPercent
+                    : LEGACY_DRIFT_PERCENT,
+            // 2-2) 물가상승률 — 파일 단위 설정으로 바뀌기 전에는 전 파일이 고정 3% 로 돌았으므로
+            //      같은 값(기본값)을 채워 넣으면 옛 저장본의 실질가치 행이 그대로 재현된다.
+            inflationRatePercent:
+                typeof workbook.inflationRatePercent === 'number'
+                    ? workbook.inflationRatePercent
+                    : INFLATION_POLICY.RATE_PERCENT,
             tabs: workbook.tabs.map((tab) => ({
                 ...tab,
                 // 3) 생년월 — 미지정('')이 기본
@@ -287,23 +302,25 @@ function normalizeShape(workbooks: Workbook[]): Workbook[] {
                     const legacyRatePercent = (event as InvestEvent & { annualRatePercent?: number }).annualRatePercent
 
                     return {
-                    ...event,
-                    // 4) 재투자 여부 — 기존 동작(항상 재투자)과 맞춰 true 가 기본
-                    reinvest: typeof event.reinvest === 'boolean' ? event.reinvest : true,
-                    // 5) 연 주가상승률 — 총수익 모델 도입 전에는 'annualRatePercent' 한 칸이 수익률 전부를 뜻했으므로
-                    //    그 값을 주가상승률로 그대로 이어받는다 (없으면 보수 기본값)
-                    priceGrowthPercent: typeof event.priceGrowthPercent === 'number'
-                        ? event.priceGrowthPercent
-                        : typeof legacyRatePercent === 'number'
-                            ? legacyRatePercent
-                            : GROWTH_POLICY.DEFAULT_PRICE_GROWTH_PERCENT,
-                    // 6) 연 배당수익률 — 총수익 모델 도입 이전에는 없던 개념이라 기본값으로 채운다
-                    dividendYieldPercent: typeof event.dividendYieldPercent === 'number'
-                        ? event.dividendYieldPercent
-                        : GROWTH_POLICY.DEFAULT_DIVIDEND_YIELD_PERCENT,
-                    // 7) 투입 대상 — 확정수익으로 명시된 것만 남기고 나머지는 전부 주력 종목 매수로 본다.
-                    //    v2 이하 저장본의 'JEPQ' 값도 여기서 자연스럽게 MAIN 으로 흡수된다.
-                    target: event.target === InvestTarget.GROWTH ? InvestTarget.GROWTH : InvestTarget.MAIN,
+                        ...event,
+                        // 4) 재투자 여부 — 기존 동작(항상 재투자)과 맞춰 true 가 기본
+                        reinvest: typeof event.reinvest === 'boolean' ? event.reinvest : true,
+                        // 5) 연 주가상승률 — 총수익 모델 도입 전에는 'annualRatePercent' 한 칸이 수익률 전부를 뜻했으므로
+                        //    그 값을 주가상승률로 그대로 이어받는다 (없으면 보수 기본값)
+                        priceGrowthPercent:
+                            typeof event.priceGrowthPercent === 'number'
+                                ? event.priceGrowthPercent
+                                : typeof legacyRatePercent === 'number'
+                                  ? legacyRatePercent
+                                  : GROWTH_POLICY.DEFAULT_PRICE_GROWTH_PERCENT,
+                        // 6) 연 배당수익률 — 총수익 모델 도입 이전에는 없던 개념이라 기본값으로 채운다
+                        dividendYieldPercent:
+                            typeof event.dividendYieldPercent === 'number'
+                                ? event.dividendYieldPercent
+                                : GROWTH_POLICY.DEFAULT_DIVIDEND_YIELD_PERCENT,
+                        // 7) 투입 대상 — 확정수익으로 명시된 것만 남기고 나머지는 전부 주력 종목 매수로 본다.
+                        //    v2 이하 저장본의 'JEPQ' 값도 여기서 자연스럽게 MAIN 으로 흡수된다.
+                        target: event.target === InvestTarget.GROWTH ? InvestTarget.GROWTH : InvestTarget.MAIN,
                     }
                 }),
             })),
@@ -354,11 +371,15 @@ export function toAssetStateMap(
     const map = {} as AssetStateMap
     CALC_ASSET_ORDER.forEach((asset) => {
         // 1) 이 종목 칸의 원본 — v3 면 같은 이름의 칸, v2 이하면 JEPQ 에만 옛 데이터를 얹는다
-        const slice = source !== undefined
-            ? source[asset]
-            : (asset === CalcAsset.JEPQ
-                ? { workbooks: parsed.workbooks ?? [], activeTabId: parsed.activeTabId ?? '' }
-                : undefined)
+        const slice =
+            source !== undefined
+                ? source[asset]
+                : asset === CalcAsset.JEPQ
+                  ? {
+                        workbooks: parsed.workbooks ?? [],
+                        activeTabId: parsed.activeTabId ?? '',
+                    }
+                  : undefined
 
         // 2) 원본이 없거나 비어 있으면 빈 상태로 세운다
         if (slice === undefined || !isRestorableWorkbooks(slice.workbooks)) {
@@ -384,7 +405,6 @@ export function toAssetStateMap(
  * @returns 저장된 스냅샷 (savedAt 표기에 사용)
  */
 export function saveState(assets: AssetStateMap, savedAt?: string): SavedStateDto {
-
     // 1) 스냅샷 조립 — 시세/상수는 매 진입 시 새로 조회하므로 저장 대상이 아니다
     //    저장 시각은 서버 값을 우선 쓴다. 로컬 시계와 서버 시계가 섞이면
     //    다음 진입 때 "서버본이 더 최신인가" 비교가 어긋나기 때문이다.

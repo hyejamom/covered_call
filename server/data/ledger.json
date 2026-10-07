@@ -1,6 +1,6 @@
 {
   "version": 5,
-  "savedAt": "2026-09-21T02:07:14.679Z",
+  "savedAt": "2026-09-29T08:49:33.295Z",
   "entries": [
     {
       "date": "2026-07-13",
@@ -458,6 +458,28 @@
       "months": 0,
       "amount": 100000,
       "id": "fix_1789956416652_1"
+    },
+    {
+      "type": "INSTALLMENT",
+      "name": "그래픽카드",
+      "cardId": "card_1786518281595_5",
+      "category": "쇼핑",
+      "startYm": "2026-09",
+      "endYm": "",
+      "months": 12,
+      "amount": 1329000,
+      "id": "fix_1790643892134_1"
+    },
+    {
+      "type": "INSTALLMENT",
+      "name": "케이스티파이",
+      "cardId": "card_1786518281595_5",
+      "category": "쇼핑",
+      "startYm": "2026-09",
+      "endYm": "",
+      "months": 3,
+      "amount": 80700,
+      "id": "fix_1790671772439_1"
     }
   ],
   "fixedIncomes": [

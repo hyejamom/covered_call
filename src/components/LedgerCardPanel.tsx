@@ -27,9 +27,8 @@ interface LedgerCardPanelProps {
  * 셋 다 빼야 이번 달에 내 돈으로 카드에서 새로 쓴 금액만 남는다.
  */
 function LedgerCardPanel(props: LedgerCardPanelProps) {
-
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
-    const [cardName, setCardName] = useState<string>('')   // 카드 등록 입력값
+    const [cardName, setCardName] = useState<string>('') // 카드 등록 입력값
 
     // ┣━━━━━━━━━━━━━━━━ Handlers ━━━━━━━━━━━━━━━━━━━┫
 
@@ -82,7 +81,9 @@ function LedgerCardPanel(props: LedgerCardPanelProps) {
 
             {/* 2) 카드별 정산 — 청구 총액(직접 입력) − 할부 − 고정비 − 엄마 심부름 = 실제 사용액 */}
             {props.cardStatements.length === 0 ? (
-                <p className={'ledger_empty'}>등록된 카드가 없습니다. 카드를 먼저 등록하면 고정비·할부를 묶을 수 있습니다.</p>
+                <p className={'ledger_empty'}>
+                    등록된 카드가 없습니다. 카드를 먼저 등록하면 고정비·할부를 묶을 수 있습니다.
+                </p>
             ) : (
                 <div className={'ledger_card_list'}>
                     {props.cardStatements.map((statement) => {
@@ -120,7 +121,9 @@ function LedgerCardPanel(props: LedgerCardPanelProps) {
                                 {/* 2-3) 자동 계산 ① — 그 달 이 카드에 걸린 할부 합계 */}
                                 <div className={'ledger_card_row'}>
                                     <span className={'ledger_card_row_label'}>− 할부</span>
-                                    <span className={'ledger_card_row_value'}>{formatKrw(statement.installment)}원</span>
+                                    <span className={'ledger_card_row_value'}>
+                                        {formatKrw(statement.installment)}원
+                                    </span>
                                 </div>
 
                                 {/* 2-4) 자동 계산 ② — 이 카드로 결제되는 고정비 합계. 명세서 총액에 이미 섞여 있으니 함께 걷어낸다 */}
@@ -142,19 +145,29 @@ function LedgerCardPanel(props: LedgerCardPanelProps) {
                                 <div className={'ledger_card_row ledger_card_row_result'}>
                                     <span className={'ledger_card_row_label'}>= 실제 사용</span>
                                     <span
-                                        className={invalid
-                                            ? 'ledger_card_row_value ledger_card_actual ledger_card_actual_invalid'
-                                            : 'ledger_card_row_value ledger_card_actual'}
-                                        title={invalid ? '할부＋고정비＋심부름 합계가 청구 총액보다 큽니다. 총액이나 등록 내용을 확인하세요.' : ''}
+                                        className={
+                                            invalid
+                                                ? 'ledger_card_row_value ledger_card_actual ledger_card_actual_invalid'
+                                                : 'ledger_card_row_value ledger_card_actual'
+                                        }
+                                        title={
+                                            invalid
+                                                ? '할부＋고정비＋심부름 합계가 청구 총액보다 큽니다. 총액이나 등록 내용을 확인하세요.'
+                                                : ''
+                                        }
                                     >
-                                        {statement.total === null ? '총액 입력 필요' : `${formatKrw(statement.actual ?? 0)}원`}
+                                        {statement.total === null
+                                            ? '총액 입력 필요'
+                                            : `${formatKrw(statement.actual ?? 0)}원`}
                                     </span>
                                 </div>
 
                                 {/* 2-7) 참고 — 내 지출에서 빠지는 몫이 얼마인지 한 줄로 요약 */}
                                 {(statement.autoCharged > 0 || statement.errand > 0) && (
                                     <span className={'ledger_card_note'}>
-                                        자동 청구 {formatKrw(statement.autoCharged)}원 (할부 {formatKrw(statement.installment)}원 + 고정비 {formatKrw(statement.recurring)}원)
+                                        자동 청구 {formatKrw(statement.autoCharged)}원 (할부{' '}
+                                        {formatKrw(statement.installment)}원 + 고정비 {formatKrw(statement.recurring)}
+                                        원)
                                         {statement.errand > 0 && ` · ${ERRAND_LABEL} ${formatKrw(statement.errand)}원`}
                                     </span>
                                 )}
@@ -190,11 +203,10 @@ interface LedgerCardErrandBoxProps {
  * (한 컴포넌트에서 카드별 입력값을 맵으로 들고 있으면 카드가 늘 때마다 상태 관리가 지저분해진다)
  */
 function LedgerCardErrandBox(props: LedgerCardErrandBoxProps) {
-
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
-    const [memo, setMemo] = useState<string>('')       // 대납 입력 폼 내용 메모
-    const [amount, setAmount] = useState<string>('')   // 대납 입력 폼 금액 — 빈 값 허용을 위해 문자열로 들고 있는다
-    const [open, setOpen] = useState<boolean>(false)   // 입력 폼 펼침 여부. 심부름이 없는 달에는 접어 둔다
+    const [memo, setMemo] = useState<string>('') // 대납 입력 폼 내용 메모
+    const [amount, setAmount] = useState<string>('') // 대납 입력 폼 금액 — 빈 값 허용을 위해 문자열로 들고 있는다
+    const [open, setOpen] = useState<boolean>(false) // 입력 폼 펼침 여부. 심부름이 없는 달에는 접어 둔다
 
     // ┣━━━━━━━━━━━━━━━━ Derived ━━━━━━━━━━━━━━━━━━━━┫
     // 1) 추가 가능 여부 — 금액이 0보다 커야 한다

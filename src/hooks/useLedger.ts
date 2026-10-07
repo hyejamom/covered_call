@@ -9,12 +9,7 @@ import {
     toLivingCost,
 } from '../services/ledgerEngine'
 import { fetchRemoteLedger, saveRemoteLedger } from '../services/ledgerApiService'
-import {
-    loadLedger,
-    saveLedger,
-    toRestoredSnapshot,
-    type LedgerSnapshot,
-} from '../services/ledgerStorageService'
+import { loadLedger, saveLedger, toRestoredSnapshot, type LedgerSnapshot } from '../services/ledgerStorageService'
 import {
     FixedCostType,
     LedgerKind,
@@ -99,8 +94,7 @@ async function pushLedger(snapshot: LedgerSnapshot): Promise<PushResult> {
         return { status: LedgerSyncStatus.SAVED, savedAt: result.savedAt, message: null }
     } catch (caught) {
         // fetch 는 연결 실패에 TypeError, 타임아웃(abort)에 AbortError 를 던진다
-        const offline = caught instanceof TypeError
-            || (caught instanceof DOMException && caught.name === 'AbortError')
+        const offline = caught instanceof TypeError || (caught instanceof DOMException && caught.name === 'AbortError')
 
         return {
             status: offline ? LedgerSyncStatus.OFFLINE : LedgerSyncStatus.ERROR,
@@ -121,20 +115,19 @@ async function pushLedger(snapshot: LedgerSnapshot): Promise<PushResult> {
  * — 진입 시에는 서버 파일이 이긴다. 다른 기기에서 git pull 로 받은 내용이 그대로 펼쳐져야 하기 때문이다.
  */
 export function useLedger() {
-
     // ┣━━━━━━━━━━━━━━━━ States ━━━━━━━━━━━━━━━━━━━━━┫
-    const [snapshot] = useState(() => loadLedger())                                   // 최초 1회 복원한 저장본
-    const [entries, setEntries] = useState<LedgerEntry[]>(snapshot.entries)           // 직접 입력한 입출금 항목
-    const [cards, setCards] = useState<LedgerCard[]>(snapshot.cards)                  // 등록된 결제 카드
-    const [fixedCosts, setFixedCosts] = useState<FixedCost[]>(snapshot.fixedCosts)    // 고정비 · 할부 정의
+    const [snapshot] = useState(() => loadLedger()) // 최초 1회 복원한 저장본
+    const [entries, setEntries] = useState<LedgerEntry[]>(snapshot.entries) // 직접 입력한 입출금 항목
+    const [cards, setCards] = useState<LedgerCard[]>(snapshot.cards) // 등록된 결제 카드
+    const [fixedCosts, setFixedCosts] = useState<FixedCost[]>(snapshot.fixedCosts) // 고정비 · 할부 정의
     const [fixedIncomes, setFixedIncomes] = useState<FixedIncome[]>(snapshot.fixedIncomes) // 고정 수입 정의 (급여 등)
     const [statements, setStatements] = useState<CardStatement[]>(snapshot.statements) // 카드별 월 청구 총액 (직접 입력)
-    const [errands, setErrands] = useState<CardErrand[]>(snapshot.errands)           // 대납(엄마 심부름) — 카드값에 섞인 남의 돈
-    const [selectedYm, setSelectedYm] = useState<string>(todayYm())                   // 화면에 펼쳐 볼 달 'YYYY-MM'
+    const [errands, setErrands] = useState<CardErrand[]>(snapshot.errands) // 대납(엄마 심부름) — 카드값에 섞인 남의 돈
+    const [selectedYm, setSelectedYm] = useState<string>(todayYm()) // 화면에 펼쳐 볼 달 'YYYY-MM'
     const [syncStatus, setSyncStatus] = useState<LedgerSyncStatus>(LedgerSyncStatus.LOADING) // 서버 저장 상태
-    const [syncedAt, setSyncedAt] = useState<string | null>(null)                     // 서버가 확정한 마지막 저장 시각 (ISO)
-    const [syncError, setSyncError] = useState<string | null>(null)                   // 마지막 실패 사유 — 툴팁으로 보여준다
-    const [hydrated, setHydrated] = useState<boolean>(false)                          // 서버 조회가 끝났는지. 끝나기 전에는 저장하지 않는다
+    const [syncedAt, setSyncedAt] = useState<string | null>(null) // 서버가 확정한 마지막 저장 시각 (ISO)
+    const [syncError, setSyncError] = useState<string | null>(null) // 마지막 실패 사유 — 툴팁으로 보여준다
+    const [hydrated, setHydrated] = useState<boolean>(false) // 서버 조회가 끝났는지. 끝나기 전에는 저장하지 않는다
 
     // ┣━━━━━━━━━━━━━━━━ Refs ━━━━━━━━━━━━━━━━━━━━━━━┫
     // 서버에 마지막으로 올린 내용의 키 — 같은 내용을 다시 올려 파일(과 git diff)을 흔들지 않기 위함
@@ -174,7 +167,12 @@ export function useLedger() {
                 // 1-2) 서버에 아직 파일이 없다 — 빈 내용을 기준으로 잡아,
                 //      로컬에 뭔가 있으면 아래 저장 효과가 그것을 첫 파일로 올린다
                 syncedKeyRef.current = toSyncKey({
-                    entries: [], cards: [], fixedCosts: [], fixedIncomes: [], statements: [], errands: [],
+                    entries: [],
+                    cards: [],
+                    fixedCosts: [],
+                    fixedIncomes: [],
+                    statements: [],
+                    errands: [],
                 })
                 setSyncStatus(LedgerSyncStatus.SAVED)
             } catch (caught) {
@@ -256,24 +254,27 @@ export function useLedger() {
     //    직접 입력한 지출은 대개 카드로 긁은 큰 건이라 카드 사용액 안에 이미 있다.
     //    그래서 지출을 따로 더하는 대신, 카드 사용액에서 직접 입력분을 뺀 나머지를 생활비로 잡아 합산한다.
     //    (직접 입력분이 더 크면 현금·계좌이체가 섞인 것이라 생활비는 0이 되고 직접 입력분이 그대로 총지출에 들어간다)
-    const summary: LedgerMonthSummary = monthEntries.reduce<LedgerMonthSummary>((acc, entry) => {
-        if (entry.kind === LedgerKind.INCOME) acc.income += entry.amount
-        else acc.expense += entry.amount
-        return acc
-    }, {
-        income: 0,
-        fixedIncome: fixedIncomeTotal,
-        expense: 0,
-        fixed: fixedTotal,
-        cardUsed: cardUsedTotal,
-        errand: errandTotal,
-        living: 0,
-        total: 0,
-        net: 0,
-    })
+    const summary: LedgerMonthSummary = monthEntries.reduce<LedgerMonthSummary>(
+        (acc, entry) => {
+            if (entry.kind === LedgerKind.INCOME) acc.income += entry.amount
+            else acc.expense += entry.amount
+            return acc
+        },
+        {
+            income: 0,
+            fixedIncome: fixedIncomeTotal,
+            expense: 0,
+            fixed: fixedTotal,
+            cardUsed: cardUsedTotal,
+            errand: errandTotal,
+            living: 0,
+            total: 0,
+            net: 0,
+        },
+    )
     summary.living = toLivingCost(summary.cardUsed, summary.expense)
     summary.total = summary.fixed + summary.expense + summary.living
-    summary.net = (summary.income + summary.fixedIncome) - summary.total
+    summary.net = summary.income + summary.fixedIncome - summary.total
 
     // 7) 분류별 지출 집계 — 고정비 · 직접 입력한 큰 지출 · 나머지를 뭉친 생활비를 한 통에 담는다
     const expenseByCategory: LedgerCategorySummary[] = Object.entries(
@@ -297,10 +298,9 @@ export function useLedger() {
 
     // 8) 기록이 있는 달 목록 — 월 이동 시 "여기에 기록이 있다"를 표시하는 데 쓴다
     //    카드 명세서만 적어 둔 달도 기록이 있는 달로 친다 (이 가계부는 카드값 입력이 주된 기록이다)
-    const recordedYms: string[] = [...new Set([
-        ...entries.map((entry) => toYmOfDate(entry.date)),
-        ...statements.map((statement) => statement.ym),
-    ])].sort()
+    const recordedYms: string[] = [
+        ...new Set([...entries.map((entry) => toYmOfDate(entry.date)), ...statements.map((statement) => statement.ym)]),
+    ].sort()
 
     // ┣━━━━━━━━━━━━━━━━ Handlers ━━━━━━━━━━━━━━━━━━━┫
 
@@ -387,12 +387,15 @@ export function useLedger() {
 
     /** 고정비/할부 추가 — @param draft 입력 폼에서 넘어온 값 (id 는 여기서 발급) */
     const handleAddFixedCost = (draft: Omit<FixedCost, 'id'>) => {
-        setFixedCosts((prev) => [...prev, {
-            ...draft,
-            id: nextId('fix'),
-            // 진짜 고정비는 개월 수 개념이 없으므로 0으로 못 박는다
-            months: draft.type === FixedCostType.INSTALLMENT ? draft.months : 0,
-        }])
+        setFixedCosts((prev) => [
+            ...prev,
+            {
+                ...draft,
+                id: nextId('fix'),
+                // 진짜 고정비는 개월 수 개념이 없으므로 0으로 못 박는다
+                months: draft.type === FixedCostType.INSTALLMENT ? draft.months : 0,
+            },
+        ])
     }
 
     /**
@@ -400,12 +403,18 @@ export function useLedger() {
      * id 는 유지하고 나머지를 통째로 갈아 끼운다. 등록과 같은 폼을 쓰므로 부분 병합은 하지 않는다.
      */
     const handleUpdateFixedCost = (id: string, patch: Omit<FixedCost, 'id'>) => {
-        setFixedCosts((prev) => prev.map((cost) => (cost.id === id ? {
-            ...patch,
-            id,
-            // 진짜 고정비로 바꿔 저장하면 개월 수는 의미가 없어지므로 0으로 되돌린다
-            months: patch.type === FixedCostType.INSTALLMENT ? patch.months : 0,
-        } : cost)))
+        setFixedCosts((prev) =>
+            prev.map((cost) =>
+                cost.id === id
+                    ? {
+                          ...patch,
+                          id,
+                          // 진짜 고정비로 바꿔 저장하면 개월 수는 의미가 없어지므로 0으로 되돌린다
+                          months: patch.type === FixedCostType.INSTALLMENT ? patch.months : 0,
+                      }
+                    : cost,
+            ),
+        )
     }
 
     /**
@@ -480,9 +489,7 @@ export function useLedger() {
      */
     const handleChangeStatement = (cardId: string, total: number | null) => {
         setStatements((prev) => {
-            const rest = prev.filter(
-                (statement) => !(statement.cardId === cardId && statement.ym === selectedYm),
-            )
+            const rest = prev.filter((statement) => !(statement.cardId === cardId && statement.ym === selectedYm))
             if (total === null) return rest
             return [...rest, { cardId, ym: selectedYm, total }]
         })
@@ -494,13 +501,16 @@ export function useLedger() {
      */
     const handleAddErrand = (cardId: string, memo: string, amount: number) => {
         if (!Number.isFinite(amount) || amount <= 0) return
-        setErrands((prev) => [...prev, {
-            id: nextId('err'),
-            cardId,
-            ym: selectedYm,
-            memo: memo.trim(),
-            amount: Math.round(amount),
-        }])
+        setErrands((prev) => [
+            ...prev,
+            {
+                id: nextId('err'),
+                cardId,
+                ym: selectedYm,
+                memo: memo.trim(),
+                amount: Math.round(amount),
+            },
+        ])
     }
 
     /** 대납 삭제 — @param id 삭제할 대납 id */

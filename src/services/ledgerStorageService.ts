@@ -67,13 +67,15 @@ function isRestorableEntry(value: unknown): value is LedgerEntry {
     if (typeof value !== 'object' || value === null) return false
     const candidate = value as Partial<LedgerEntry>
 
-    return typeof candidate.id === 'string'
-        && typeof candidate.date === 'string'
-        && (candidate.kind === LedgerKind.INCOME || candidate.kind === LedgerKind.EXPENSE)
-        && typeof candidate.category === 'string'
-        && typeof candidate.memo === 'string'
-        && typeof candidate.amount === 'number'
-        && Number.isFinite(candidate.amount)
+    return (
+        typeof candidate.id === 'string' &&
+        typeof candidate.date === 'string' &&
+        (candidate.kind === LedgerKind.INCOME || candidate.kind === LedgerKind.EXPENSE) &&
+        typeof candidate.category === 'string' &&
+        typeof candidate.memo === 'string' &&
+        typeof candidate.amount === 'number' &&
+        Number.isFinite(candidate.amount)
+    )
 }
 
 /** 카드 1장이 복원 가능한 형태인지 */
@@ -91,15 +93,17 @@ function isRestorableFixedCost(value: unknown): value is FixedCost {
 
     // endYm 은 뒤에 추가된 필드라 여기서 요구하지 않는다.
     // 옛 저장본에는 아예 없으므로 필수로 걸면 등록해 둔 고정비가 통째로 버려진다. (아래 toRestoredFixedCost 에서 채운다)
-    return typeof candidate.id === 'string'
-        && (candidate.type === FixedCostType.RECURRING || candidate.type === FixedCostType.INSTALLMENT)
-        && typeof candidate.name === 'string'
-        && typeof candidate.cardId === 'string'
-        && typeof candidate.category === 'string'
-        && typeof candidate.startYm === 'string'
-        && typeof candidate.months === 'number'
-        && typeof candidate.amount === 'number'
-        && Number.isFinite(candidate.amount)
+    return (
+        typeof candidate.id === 'string' &&
+        (candidate.type === FixedCostType.RECURRING || candidate.type === FixedCostType.INSTALLMENT) &&
+        typeof candidate.name === 'string' &&
+        typeof candidate.cardId === 'string' &&
+        typeof candidate.category === 'string' &&
+        typeof candidate.startYm === 'string' &&
+        typeof candidate.months === 'number' &&
+        typeof candidate.amount === 'number' &&
+        Number.isFinite(candidate.amount)
+    )
 }
 
 /** 옛 저장본 보정 — endYm 이 없던 시절의 고정비는 '무기한'으로 이어받는다 */
@@ -112,12 +116,14 @@ function isRestorableFixedIncome(value: unknown): value is FixedIncome {
     if (typeof value !== 'object' || value === null) return false
     const candidate = value as Partial<FixedIncome>
 
-    return typeof candidate.id === 'string'
-        && typeof candidate.name === 'string'
-        && typeof candidate.category === 'string'
-        && typeof candidate.startYm === 'string'
-        && typeof candidate.amount === 'number'
-        && Number.isFinite(candidate.amount)
+    return (
+        typeof candidate.id === 'string' &&
+        typeof candidate.name === 'string' &&
+        typeof candidate.category === 'string' &&
+        typeof candidate.startYm === 'string' &&
+        typeof candidate.amount === 'number' &&
+        Number.isFinite(candidate.amount)
+    )
 }
 
 /** 카드 월 청구 총액 1건이 복원 가능한 형태인지 */
@@ -125,10 +131,12 @@ function isRestorableStatement(value: unknown): value is CardStatement {
     if (typeof value !== 'object' || value === null) return false
     const candidate = value as Partial<CardStatement>
 
-    return typeof candidate.cardId === 'string'
-        && typeof candidate.ym === 'string'
-        && typeof candidate.total === 'number'
-        && Number.isFinite(candidate.total)
+    return (
+        typeof candidate.cardId === 'string' &&
+        typeof candidate.ym === 'string' &&
+        typeof candidate.total === 'number' &&
+        Number.isFinite(candidate.total)
+    )
 }
 
 /** 대납 1건이 복원 가능한 형태인지 */
@@ -136,12 +144,14 @@ function isRestorableErrand(value: unknown): value is CardErrand {
     if (typeof value !== 'object' || value === null) return false
     const candidate = value as Partial<CardErrand>
 
-    return typeof candidate.id === 'string'
-        && typeof candidate.cardId === 'string'
-        && typeof candidate.ym === 'string'
-        && typeof candidate.memo === 'string'
-        && typeof candidate.amount === 'number'
-        && Number.isFinite(candidate.amount)
+    return (
+        typeof candidate.id === 'string' &&
+        typeof candidate.cardId === 'string' &&
+        typeof candidate.ym === 'string' &&
+        typeof candidate.memo === 'string' &&
+        typeof candidate.amount === 'number' &&
+        Number.isFinite(candidate.amount)
+    )
 }
 
 // ┣━━━━━━━━━━━━━━━━ API ━━━━━━━━━━━━━━━━━━━━━━━━┫

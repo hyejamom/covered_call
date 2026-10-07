@@ -130,9 +130,7 @@ function toBuyableShares(cash: number, sharePriceKrw: number): number {
 
 /** 이벤트가 해당 연월을 포함하는 구간인지 (종료 연월이 비어 있으면 "계속") */
 function coversYm(event: InvestEvent, ym: string): boolean {
-    return event.startYm !== ''
-        && event.startYm <= ym
-        && (event.endYm === '' || ym <= event.endYm)
+    return event.startYm !== '' && event.startYm <= ym && (event.endYm === '' || ym <= event.endYm)
 }
 
 /** 일회성 투입(초기 일시금 / 단발성 추가)인지 — 이 두 타입만 투입 대상을 고를 수 있다 */
@@ -164,9 +162,7 @@ function isGrowthSource(event: InvestEvent): boolean {
  */
 export function calcRecurringBase(events: InvestEvent[], ym: string): number {
     // 1) 활성 정기 매수 판정
-    const activeRecurring = events.filter((event) =>
-        event.type === EventType.RECURRING && coversYm(event, ym),
-    )
+    const activeRecurring = events.filter((event) => event.type === EventType.RECURRING && coversYm(event, ym))
     if (activeRecurring.length === 0) return 0
 
     // 2) 발효된 금액변경 이벤트 중 가장 최근 것 채택
@@ -186,11 +182,7 @@ export function calcRecurringBase(events: InvestEvent[], ym: string): number {
  */
 export function calcRecurringStop(events: InvestEvent[], ym: string, excludeId?: string): number {
     return events
-        .filter((event) =>
-            event.type === EventType.RECURRING_STOP
-            && event.id !== excludeId
-            && coversYm(event, ym),
-        )
+        .filter((event) => event.type === EventType.RECURRING_STOP && event.id !== excludeId && coversYm(event, ym))
         .reduce((sum, event) => sum + event.amount, 0)
 }
 
@@ -228,8 +220,8 @@ function calcContribution(events: InvestEvent[], ym: string): number {
     const monthlyAmount = Math.max(0, recurringBase - calcRecurringStop(events, ym))
 
     // 4) 초기 일시금에 그 달 정기분이 포함되어 있으면 건너뜀
-    const coveredByInitial = events.some((event) =>
-        event.type === EventType.INITIAL && event.startYm === ym && event.includesRecurring,
+    const coveredByInitial = events.some(
+        (event) => event.type === EventType.INITIAL && event.startYm === ym && event.includesRecurring,
     )
 
     if (!coveredByInitial) total += monthlyAmount
@@ -245,10 +237,11 @@ function calcContribution(events: InvestEvent[], ym: string): number {
  */
 export function calcGrowthContribution(events: InvestEvent[], ym: string): number {
     return events
-        .filter((event) => (
-            (event.type === EventType.RECURRING_GROWTH && coversYm(event, ym))
-            || (isGrowthOneShot(event) && event.startYm === ym)
-        ))
+        .filter(
+            (event) =>
+                (event.type === EventType.RECURRING_GROWTH && coversYm(event, ym)) ||
+                (isGrowthOneShot(event) && event.startYm === ym),
+        )
         .reduce((sum, event) => sum + event.amount, 0)
 }
 
@@ -320,9 +313,7 @@ export function hasGrowthPlan(events: InvestEvent[]): boolean {
  * 2) 해당하는 구간이 없으면 기본값 "재투자 함"
  */
 function isReinvesting(events: InvestEvent[], ym: string): boolean {
-    const coveringRules = events.filter((event) =>
-        event.type === EventType.REINVEST && coversYm(event, ym),
-    )
+    const coveringRules = events.filter((event) => event.type === EventType.REINVEST && coversYm(event, ym))
 
     if (coveringRules.length === 0) return true
 
@@ -337,10 +328,13 @@ function isReinvesting(events: InvestEvent[], ym: string): boolean {
  */
 function findStartYm(events: InvestEvent[]): string | null {
     const validYms = events
-        .filter((event) => event.type !== EventType.REINVEST
-            && event.type !== EventType.RECURRING_STOP
-            // 인출은 새 돈이 들어오는 이벤트가 아니라 있는 돈을 빼는 규칙이라 개시 시점을 만들지 않는다
-            && event.type !== EventType.WITHDRAW)
+        .filter(
+            (event) =>
+                event.type !== EventType.REINVEST &&
+                event.type !== EventType.RECURRING_STOP &&
+                // 인출은 새 돈이 들어오는 이벤트가 아니라 있는 돈을 빼는 규칙이라 개시 시점을 만들지 않는다
+                event.type !== EventType.WITHDRAW,
+        )
         .map((event) => event.startYm)
         .filter((ym) => ym !== '')
 
@@ -431,13 +425,41 @@ function simulateYear(
         // 1) 개시 이전 달은 계산 없이 빈 행으로 기록
         if (!active) {
             months.push({
-                ym, year, month, active: false,
-                contribution: 0, dividendGross: 0, dividendTax: 0, dividendNet: 0, dividendReal: 0, reinvested: false, dividendCashBalance: 0,
-                cumulativeContribution: 0, cumulativeDividendTaken: 0, netContribution: 0,
-                withdrawRequested: 0, withdrawPaid: 0, sharesSold: 0, depleted: false,
-                purchaseAmount: 0, cumulativePurchase: 0, shares: 0, balance: 0, sharePriceKrw: 0, valuation: 0, accountRemaining: 0, taxed: false,
-                growthContribution: 0, growthGain: 0, growthPrincipal: 0, growthBalance: 0, growthTransfer: 0,
-                growthPriceGain: 0, growthDividendGross: 0, growthDividendTax: 0, growthDividendNet: 0,
+                ym,
+                year,
+                month,
+                active: false,
+                contribution: 0,
+                dividendGross: 0,
+                dividendTax: 0,
+                dividendNet: 0,
+                dividendReal: 0,
+                reinvested: false,
+                dividendCashBalance: 0,
+                cumulativeContribution: 0,
+                cumulativeDividendTaken: 0,
+                netContribution: 0,
+                withdrawRequested: 0,
+                withdrawPaid: 0,
+                sharesSold: 0,
+                depleted: false,
+                purchaseAmount: 0,
+                cumulativePurchase: 0,
+                shares: 0,
+                balance: 0,
+                sharePriceKrw: 0,
+                valuation: 0,
+                accountRemaining: 0,
+                taxed: false,
+                growthContribution: 0,
+                growthGain: 0,
+                growthPrincipal: 0,
+                growthBalance: 0,
+                growthTransfer: 0,
+                growthPriceGain: 0,
+                growthDividendGross: 0,
+                growthDividendTax: 0,
+                growthDividendNet: 0,
             })
             continue
         }
@@ -571,13 +593,29 @@ function simulateYear(
         taxTotal += dividendTax
 
         months.push({
-            ym, year, month, active: true,
-            contribution, dividendGross, dividendTax, dividendNet, dividendReal, reinvested, dividendCashBalance,
-            cumulativeContribution, cumulativeDividendTaken,
+            ym,
+            year,
+            month,
+            active: true,
+            contribution,
+            dividendGross,
+            dividendTax,
+            dividendNet,
+            dividendReal,
+            reinvested,
+            dividendCashBalance,
+            cumulativeContribution,
+            cumulativeDividendTaken,
             // 순투입금 — 넣은 돈에서 꺼낸 배당을 뺀 값. 배당을 더 꺼내 갔다면 음수가 될 수도 있다(원금 회수 완료)
             netContribution: cumulativeContribution - cumulativeDividendTaken,
-            withdrawRequested, withdrawPaid, sharesSold, depleted,
-            purchaseAmount, cumulativePurchase, shares, balance,
+            withdrawRequested,
+            withdrawPaid,
+            sharesSold,
+            depleted,
+            purchaseAmount,
+            cumulativePurchase,
+            shares,
+            balance,
             sharePriceKrw,
             // 평가액 = 보유주 × 그 시점 주가 + 아직 못 산 예수금
             valuation: shares * sharePriceKrw + balance,
@@ -585,8 +623,15 @@ function simulateYear(
             accountRemaining: shares * sharePriceKrw + balance + dividendCashBalance,
             // 종합과세 여부는 워크북 전체 합산이 끝나야 알 수 있어, 연 단위 판정 뒤에 덮어쓴다
             taxed: false,
-            growthContribution, growthGain, growthPrincipal, growthBalance, growthTransfer,
-            growthPriceGain, growthDividendGross, growthDividendTax, growthDividendNet,
+            growthContribution,
+            growthGain,
+            growthPrincipal,
+            growthBalance,
+            growthTransfer,
+            growthPriceGain,
+            growthDividendGross,
+            growthDividendTax,
+            growthDividendNet,
         })
     }
 
@@ -601,9 +646,15 @@ function simulateYear(
         // 확정수익 자산은 평가액·원금과 함께 "적립 경과 개월 수"까지 넘겨야 연말에 연차 계산이 끊기지 않는다.
         // 쌓인 배당현금도 해를 넘겨 계속 불어나므로 함께 이월한다.
         endState: {
-            shares, balance, cumulativePurchase,
-            growthBalance, growthPrincipal, growthMonths, dividendCashBalance,
-            cumulativeContribution, cumulativeDividendTaken,
+            shares,
+            balance,
+            cumulativePurchase,
+            growthBalance,
+            growthPrincipal,
+            growthMonths,
+            dividendCashBalance,
+            cumulativeContribution,
+            cumulativeDividendTaken,
         },
     }
 }
@@ -652,21 +703,32 @@ export function runWorkbookSimulation(
     // 1) 시트별 개시 연월과 이월 상태를 각각 독립적으로 들고 간다
     const startYms = tabs.map((tab) => findStartYm(tab.events))
     const states: CarryState[] = tabs.map(() => ({
-        shares: 0, balance: 0, cumulativePurchase: 0,
-        growthBalance: 0, growthPrincipal: 0, growthMonths: 0, dividendCashBalance: 0,
-        cumulativeContribution: 0, cumulativeDividendTaken: 0,
+        shares: 0,
+        balance: 0,
+        cumulativePurchase: 0,
+        growthBalance: 0,
+        growthPrincipal: 0,
+        growthMonths: 0,
+        dividendCashBalance: 0,
+        cumulativeContribution: 0,
+        cumulativeDividendTaken: 0,
     }))
 
     // 1-1) ISA 납입 누계 — 계좌는 사람(시트)마다 하나이므로 시트별로 따로 쌓는다
     const isaAccumulators: IsaAccumulator[] = tabs.map(() => ({
-        contributionTotal: 0, overAnnualLimitYears: [],
+        contributionTotal: 0,
+        overAnnualLimitYears: [],
     }))
 
     const byTabId: Record<string, SimulationResult> = {}
     tabs.forEach((tab) => {
         byTabId[tab.id] = {
-            byYm: {}, byYear: {}, firstTaxedYear: null, isaLimits: NO_ISA_LIMIT_STATUS,
-            depletedYm: null, firstSellYm: null,
+            byYm: {},
+            byYear: {},
+            firstTaxedYear: null,
+            isaLimits: NO_ISA_LIMIT_STATUS,
+            depletedYm: null,
+            firstSellYm: null,
         }
     })
 
@@ -677,7 +739,8 @@ export function runWorkbookSimulation(
         // 2) 시트별 1년치 시뮬레이션 — 원천징수가 조건 없이 적용되므로 한 번만 돌리면 된다
         //    (예전에는 과세 여부가 재투자액을 바꿔 2-pass 수렴이 필요했지만, 이제 그 되먹임이 없다)
         const passes = tabs.map((tab, index) =>
-            simulateYear(year, states[index], tab.events, constants, startYms[index], startYear))
+            simulateYear(year, states[index], tab.events, constants, startYms[index], startYear),
+        )
 
         // 3) 워크북 합산 — 종합과세 판정과 종소세·건보료 추정은 파일 전체를 한 덩어리로 본다
         //    성장자산 배당은 현금으로 빠지지 않고 재투자되지만 세법상 배당소득이므로 함께 합산한다
@@ -762,10 +825,13 @@ export function runWorkbookSimulation(
         tabs.forEach((tab, index) => {
             const accumulator = isaAccumulators[index]
 
-            byTabId[tab.id].isaLimits = evaluateIsaLimits({
-                contributionTotal: accumulator.contributionTotal,
-                overAnnualLimitYears: accumulator.overAnnualLimitYears,
-            }, constants)
+            byTabId[tab.id].isaLimits = evaluateIsaLimits(
+                {
+                    contributionTotal: accumulator.contributionTotal,
+                    overAnnualLimitYears: accumulator.overAnnualLimitYears,
+                },
+                constants,
+            )
         })
     }
 
